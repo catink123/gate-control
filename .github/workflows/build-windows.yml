@@ -1,0 +1,40 @@
+name: Build Windows Debug and Release configurations
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build_and_upload:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v3
+      
+    - name: Install CMake
+      uses: lukka/get-cmake@latest
+      
+    - name: Build Debug
+      uses: lukka/run-cmake@v10.7
+      with:
+        configurePreset: "windows-x64-debug"
+        buildPreset: "windows-x64-debug"
+
+    - name: Build Release
+      uses: lukka/run-cmake@v10.7
+      with:
+        configurePreset: "windows-x64-release"
+        buildPreset: "windows-x64-release"
+
+    - name: Upload Debug artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: server-debug
+        path: out/windows-x64-debug/Debug
+    
+    - name: Upload Release artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: server-release
+        path: out/windows-x64-release/Release
