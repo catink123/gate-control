@@ -4,7 +4,12 @@ set(GATE_CONTROL_PROJECT_NAME GateControl)
 set(GATE_CONTROL_SOURCE_DIR src)
 
 set(GATE_CONTROL_SOURCE
+    ${GATE_CONTROL_SOURCE_DIR}/common.hpp
     ${GATE_CONTROL_SOURCE_DIR}/main.cpp
+    ${GATE_CONTROL_SOURCE_DIR}/http_listener.hpp
+    ${GATE_CONTROL_SOURCE_DIR}/http_listener.cpp
+    ${GATE_CONTROL_SOURCE_DIR}/http_session.hpp
+    ${GATE_CONTROL_SOURCE_DIR}/http_session.cpp
 )
 
 include("cmake/modules/CPM.cmake")
