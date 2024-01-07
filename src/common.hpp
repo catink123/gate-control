@@ -7,6 +7,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
 #include <iostream>
+#include "version.hpp"
 
 namespace beast = boost::beast;
 namespace http = beast::http;

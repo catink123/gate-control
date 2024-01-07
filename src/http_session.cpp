@@ -20,7 +20,7 @@ void http_session::do_read() {
     // clear the request
     req = {};
 
-    stream.expires_after(std::chrono::seconds(3));
+    stream.expires_after(std::chrono::seconds(30));
 
     http::async_read(stream, buffer, req,
         beast::bind_front_handler(
@@ -147,7 +147,7 @@ http::message_generator handle_request(
                 req.version()
             };
 
-            res.set(http::field::server, "Gate Control Server");
+            res.set(http::field::server, VERSION);
             res.set(http::field::content_type, "text/html");
             res.keep_alive(req.keep_alive());
             res.body() = std::string(why);
@@ -163,7 +163,7 @@ http::message_generator handle_request(
                 req.version()
             };
 
-            res.set(http::field::server, "Gate Control Server");
+            res.set(http::field::server, VERSION);
             res.set(http::field::content_type, "text/html");
             res.keep_alive(req.keep_alive());
             res.body() = "The resource '" + std::string(target) + "' was not found.";
@@ -179,7 +179,7 @@ http::message_generator handle_request(
                 req.version()
             };
 
-            res.set(http::field::server, "Gate Control Server");
+            res.set(http::field::server, VERSION);
             res.set(http::field::content_type, "text/html");
             res.keep_alive(req.keep_alive());
             res.body() = "An error occured: '" + std::string(what) + "'";
@@ -236,7 +236,7 @@ http::message_generator handle_request(
             req.version()
         };
 
-        res.set(http::field::server, "Gate Control Server");
+        res.set(http::field::server, VERSION);
         res.set(http::field::content_type, mime_type(path));
         res.content_length(size);
         res.keep_alive(req.keep_alive());
@@ -251,7 +251,7 @@ http::message_generator handle_request(
         std::make_tuple(http::status::ok, req.version())
     };
 
-    res.set(http::field::server, "Gate Control Server");
+    res.set(http::field::server, VERSION);
     res.set(http::field::content_type, mime_type(path));
     res.content_length(size);
     res.keep_alive(req.keep_alive());

@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
-set(GATE_CONTROL_PROJECT_NAME GateControl)
-set(GATE_CONTROL_SOURCE_DIR src)
-
-set(GATE_CONTROL_SOURCE
-    ${GATE_CONTROL_SOURCE_DIR}/common.hpp
-    ${GATE_CONTROL_SOURCE_DIR}/main.cpp
-    ${GATE_CONTROL_SOURCE_DIR}/http_listener.hpp
-    ${GATE_CONTROL_SOURCE_DIR}/http_listener.cpp
-    ${GATE_CONTROL_SOURCE_DIR}/http_session.hpp
-    ${GATE_CONTROL_SOURCE_DIR}/http_session.cpp
+project(
+    GateControl
+    VERSION 1.0.0
+    LANGUAGES CXX
 )
 
 include("cmake/modules/CPM.cmake")
@@ -29,17 +23,4 @@ CPMAddPackage(
         "BOOST_ENABLE_CMAKE ON"
 )
 
-project(${GATE_CONTROL_PROJECT_NAME})
-
-add_executable(${GATE_CONTROL_PROJECT_NAME} ${GATE_CONTROL_SOURCE})
-
-set_property(TARGET ${GATE_CONTROL_PROJECT_NAME} PROPERTY CXX_STANDARD 17)
-
-# link libraries
-
-target_include_directories(${GATE_CONTROL_PROJECT_NAME} PRIVATE ${BOOST_LIBRARIES})
-
-target_link_libraries(
-    ${GATE_CONTROL_PROJECT_NAME} PRIVATE
-    Boost::beast nlohmann_json::nlohmann_json
-)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src)
