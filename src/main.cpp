@@ -1,4 +1,5 @@
 #include <nlohmann/json.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,6 +23,16 @@ int main() {
 
     std::cout << "Server started at " << ADDRESS << ":" << PORT << "." << std::endl;
 
+    // graceful shutdown
+    net::signal_set signals(ioc, SIGINT, SIGTERM);
+    signals.async_wait(
+        [&](const beast::error_code&, int) {
+            // abort all operations
+            ioc.stop();
+            std::cout << "Server is stopping..." << std::endl;
+        }
+    );
+
     std::vector<std::thread> v;
     v.reserve(THREAD_COUNT - 1);
     for (auto i = 0; i < THREAD_COUNT - 1; ++i) {
@@ -32,6 +43,11 @@ int main() {
         );
     }
     ioc.run();
+
+    // if the program is here, the graceful shutdown is in progress, wait for all threads to end
+    for (std::thread& th : v) {
+        th.join();
+    }
 
     return 0;
 }

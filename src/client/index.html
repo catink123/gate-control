@@ -7,5 +7,27 @@
 </head>
 <body>
     <h1>Test Client Page</h1>
+
+    <p style="display: flex; gap: 5px">
+        <span>Text</span>
+        <input type="text" id="ws-message">
+    </p>
+
+    <button id="ws-send" disabled>Send</button>
+
+    <script>
+        let ws = new WebSocket("ws://" + location.host);
+
+        ws.addEventListener('message', e => {
+            alert(`Message from server: ${e.data}`);
+        });
+
+        ws.addEventListener('open', () => {
+            document.querySelector('#ws-send').disabled = false;
+            document.querySelector('#ws-send').addEventListener('click', () => {
+                ws.send(document.querySelector('#ws-message').value);
+            });
+        });
+    </script>
 </body>
 </html>

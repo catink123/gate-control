@@ -4,7 +4,11 @@ http_session::http_session(
     tcp::socket&& socket,
     const std::shared_ptr<const std::string>& doc_root
 ) : stream(std::move(socket)),
-    doc_root(doc_root) {}
+    doc_root(doc_root)
+{
+    static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
+    response_queue.reserve(queue_limit);
+}
 
 void http_session::run() {
     net::dispatch(
@@ -17,12 +21,15 @@ void http_session::run() {
 }
 
 void http_session::do_read() {
-    // clear the request
-    req = {};
+    // make a new parser for each request
+    parser.emplace();
+
+    // set a max body size of 10k to prevent abuse
+    parser->body_limit(10000);
 
     stream.expires_after(std::chrono::seconds(30));
 
-    http::async_read(stream, buffer, req,
+    http::async_read(stream, buffer, *parser,
         beast::bind_front_handler(
             &http_session::on_read,
             shared_from_this()
@@ -46,23 +53,57 @@ void http_session::on_read(
         return;
     }
 
-    send_response(
-        handle_request(*doc_root, std::move(req))
+    // if the request is a WebSocket Upgrade
+    if (websocket::is_upgrade(parser->get())) {
+        // create a new websocket session, moving the socket and request into it
+        std::make_shared<websocket_session>(
+            stream.release_socket()
+        )->do_accept(parser->release());
+        return;
+    }
+
+    // send the response back
+    queue_write(
+        handle_request(*doc_root, parser->release())
     );
+
+    // if the response queue is not at it's limit, try to add another response to the queue
+    if (response_queue.size() < queue_limit) {
+        do_read();
+    }
 }
 
-void http_session::send_response(http::message_generator&& msg) {
-    bool keep_alive = msg.keep_alive();
+void http_session::queue_write(http::message_generator msg) {
+    // store the work
+    response_queue.push_back(std::move(msg));
 
-    beast::async_write(
-        stream,
-        std::move(msg),
-        beast::bind_front_handler(
-            &http_session::on_write,
-            shared_from_this(),
-            keep_alive
-        )
-    );
+    // if there wasn't any work before, start the write loop
+    if (response_queue.size() == 1) {
+        do_write();
+    }
+}
+
+bool http_session::do_write() {
+    const bool was_full = response_queue.size() == queue_limit;
+
+    if (!response_queue.empty()) {
+        http::message_generator msg = std::move(response_queue.front());
+        response_queue.erase(response_queue.begin());
+
+        bool keep_alive = msg.keep_alive();
+
+        beast::async_write(
+            stream,
+            std::move(msg),
+            beast::bind_front_handler(
+                &http_session::on_write,
+                shared_from_this(),
+                keep_alive
+            )
+        );
+    }
+
+    return was_full;
 }
 
 std::string path_cat(
@@ -274,7 +315,9 @@ void http_session::on_write(
         return do_close();
     }
 
-    do_read();
+    if (do_write()) {
+        do_read();
+    }
 }
 
 void http_session::do_close() {

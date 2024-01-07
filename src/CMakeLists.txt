@@ -9,6 +9,8 @@ add_executable(
     http_listener.cpp
     http_session.hpp
     http_session.cpp
+    websocket_session.hpp
+    websocket_session.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)

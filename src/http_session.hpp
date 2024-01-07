@@ -2,9 +2,11 @@
 #define HTTP_SESSION_HPP
 
 #include "common.hpp"
+#include <boost/optional.hpp>
 #include <memory>
 #include <string>
 #include <chrono>
+#include "websocket_session.hpp"
 
 beast::string_view mime_type(
     beast::string_view path
@@ -26,7 +28,12 @@ class http_session : public std::enable_shared_from_this<http_session> {
     beast::tcp_stream stream;
     beast::flat_buffer buffer;
     std::shared_ptr<const std::string> doc_root;
-    http::request<http::string_body> req;
+
+    // a queue to prevent overload
+    static constexpr std::size_t queue_limit = 16;
+    std::vector<http::message_generator> response_queue;
+
+    boost::optional<http::request_parser<http::string_body>> parser;
 
 public:
     http_session(
@@ -42,10 +49,11 @@ public:
         std::size_t bytes_transferred
     );
 
-    void send_response(http::message_generator&& msg);
+    void queue_write(http::message_generator msg);
 
     void do_close();
 
+    bool do_write();
     void on_write(
         bool keep_alive,
         beast::error_code ec,
