@@ -3,11 +3,17 @@
 
 #include "common.hpp"
 #include <boost/beast/websocket.hpp>
+#include <boost/asio/placeholders.hpp>
 #include <memory>
+#include <queue>
+#include <thread>
+#include "json_message.hpp"
 
 class websocket_session : public std::enable_shared_from_this<websocket_session> {
     websocket::stream<beast::tcp_stream> ws;
     beast::flat_buffer buffer;
+    std::string write_buffer;
+    std::queue<std::string> write_queue;
 
 public:
     explicit websocket_session(tcp::socket&& socket);
@@ -42,9 +48,14 @@ public:
 
 private:
     void on_accept(beast::error_code ec);
+    void do_write();
     void do_read();
     void on_write(beast::error_code ec, std::size_t bytes_transferred);
     void on_read(beast::error_code ec, std::size_t bytes_transferred);
+
+    void queue_message(std::string_view message);
+
+    void handle_message(std::string_view message);
 };
 
 #endif

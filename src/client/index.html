@@ -8,25 +8,33 @@
 <body>
     <h1>Test Client Page</h1>
 
-    <p style="display: flex; gap: 5px">
-        <span>Text</span>
-        <input type="text" id="ws-message">
-    </p>
-
-    <button id="ws-send" disabled>Send</button>
+    <button disabled id="send-query">Query State</button>
+    <button disabled id="send-up">Send Raise</button>
+    <button disabled id="send-down">Send Lower</button>
 
     <script>
         let ws = new WebSocket("ws://" + location.host);
 
         ws.addEventListener('message', e => {
-            alert(`Message from server: ${e.data}`);
+	    let msg = JSON.parse(e.data);
+	    if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
+	    if (msg.type == "query_state_result") alert(`Current Gate State: ${msg.payload}`);
+	    if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
         });
 
+	function setListener(selector, type, listener) {
+            document.querySelector(selector).addEventListener(type, listener);
+        }
+
+        function bindMessage(selector, msgObj) {
+            setListener(selector, "click", () => ws.send(JSON.stringify(msgObj)));
+        }
+
         ws.addEventListener('open', () => {
-            document.querySelector('#ws-send').disabled = false;
-            document.querySelector('#ws-send').addEventListener('click', () => {
-                ws.send(document.querySelector('#ws-message').value);
-            });
+            document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+            bindMessage("#send-query", { type: "query_state", payload: null });
+            bindMessage("#send-up", { type: "change_state", payload: true });
+            bindMessage("#send-down", { type: "change_state", payload: false });
         });
     </script>
 </body>

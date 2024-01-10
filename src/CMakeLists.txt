@@ -11,6 +11,8 @@ add_executable(
     http_session.cpp
     websocket_session.hpp
     websocket_session.cpp
+    json_message.hpp
+    json_message.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
