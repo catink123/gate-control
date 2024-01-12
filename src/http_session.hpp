@@ -7,6 +7,7 @@
 #include <string>
 #include <chrono>
 #include "websocket_session.hpp"
+#include "arduino_messenger.hpp"
 
 beast::string_view mime_type(
     beast::string_view path
@@ -29,6 +30,8 @@ class http_session : public std::enable_shared_from_this<http_session> {
     beast::flat_buffer buffer;
     std::shared_ptr<const std::string> doc_root;
 
+    std::shared_ptr<arduino_messenger> arduino_connection;
+
     // a queue to prevent overload
     static constexpr std::size_t queue_limit = 16;
     std::vector<http::message_generator> response_queue;
@@ -38,7 +41,8 @@ class http_session : public std::enable_shared_from_this<http_session> {
 public:
     http_session(
         tcp::socket&& socket,
-        const std::shared_ptr<const std::string>& doc_root
+        const std::shared_ptr<const std::string>& doc_root,
+		std::shared_ptr<arduino_messenger> arduino_connection
     );
 
     void run();

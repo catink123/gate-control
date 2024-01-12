@@ -20,11 +20,11 @@ public:
 	};
 
 	MessageType type;
-	nlohmann::json::value_t payload;
+	nlohmann::json payload;
 
 	json_message(
 		const MessageType type,
-		nlohmann::json::value_t payload
+		nlohmann::json payload
 	) : type(type), payload(payload) {}
 
 	static std::string type_to_str(const MessageType& type);	
@@ -40,6 +40,7 @@ public:
 	);
 
 	static json_message parse_message(const std::string_view str);
+	std::string dump_message() const;
 };
 
 #endif

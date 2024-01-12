@@ -13,6 +13,8 @@ add_executable(
     websocket_session.cpp
     json_message.hpp
     json_message.cpp
+    arduino_messenger.hpp
+    arduino_messenger.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)

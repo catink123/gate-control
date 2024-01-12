@@ -1,8 +1,11 @@
 #include "websocket_session.hpp"
 
 websocket_session::websocket_session(
-    tcp::socket&& socket
-) : ws(std::move(socket)) {}
+    tcp::socket&& socket,
+	std::shared_ptr<arduino_messenger> arduino_connection
+) : ws(std::move(socket)),
+    arduino_connection(arduino_connection)
+{}
 
 void websocket_session::on_accept(beast::error_code ec) {
     if (ec) {
@@ -29,6 +32,20 @@ void websocket_session::do_read() {
 }
 
 void websocket_session::do_write() {
+    // empty arduino messages
+    {
+        std::lock_guard lock(arduino_connection->imq_mutex);
+        auto& queue = arduino_connection->incoming_message_queue;
+        while (!queue.empty()) {
+            auto message = queue.front();
+            queue.pop();
+
+            if (message.type == json_message::QueryStateResult) {
+                queue_message(message.dump_message());
+            }
+        }
+    }
+    
     // if there is something to send, do it
     if (write_queue.size() > 0) {
         write_buffer = write_queue.front();
@@ -105,10 +122,8 @@ void websocket_session::handle_message(std::string_view message) {
     try {
         auto parsed_msg = json_message::parse_message(message);
 
-        if (parsed_msg.type == json_message::QueryState)
-            queue_message(json_message::create_message(json_message::QueryStateResult));
-        if (parsed_msg.type == json_message::ChangeState)
-            queue_message(json_message::create_message(json_message::Text, "changing of state not implemented!"));
+        if (parsed_msg.type == json_message::QueryState || parsed_msg.type == json_message::ChangeState)
+            arduino_connection->send_message(parsed_msg);
     }
     catch (...) {}
 }

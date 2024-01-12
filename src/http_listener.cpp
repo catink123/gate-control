@@ -3,10 +3,12 @@
 http_listener::http_listener(
     net::io_context& ioc,
     tcp::endpoint endpoint,
-    const std::shared_ptr<const std::string>& doc_root
+    const std::shared_ptr<const std::string>& doc_root,
+	std::shared_ptr<arduino_messenger> arduino_connection
 ) : ioc(ioc),
     acceptor(net::make_strand(ioc)),
-    doc_root(doc_root)
+    doc_root(doc_root),
+    arduino_connection(arduino_connection)
 {
     beast::error_code ec;
 
@@ -59,7 +61,8 @@ void http_listener::on_accept(beast::error_code ec, tcp::socket socket) {
 
     std::make_shared<http_session>(
         std::move(socket),
-        doc_root
+        doc_root,
+        arduino_connection
     )->run();
 
     do_accept();

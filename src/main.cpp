@@ -15,10 +15,20 @@ const auto THREAD_COUNT = 8;
 int main() {
     net::io_context ioc{THREAD_COUNT};
 
+    auto arduino_connection =
+        std::make_shared<arduino_messenger>(
+            ioc,
+            "COM7",
+            115200
+        );
+
+    arduino_connection->run();
+
     std::make_shared<http_listener>(
         ioc,
         tcp::endpoint{ADDRESS, PORT},
-        DOC_ROOT
+        DOC_ROOT,
+        arduino_connection
     )->run();
 
     std::cout << "Server started at " << ADDRESS << ":" << PORT << "." << std::endl;

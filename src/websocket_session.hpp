@@ -8,15 +8,20 @@
 #include <queue>
 #include <thread>
 #include "json_message.hpp"
+#include "arduino_messenger.hpp"
 
 class websocket_session : public std::enable_shared_from_this<websocket_session> {
     websocket::stream<beast::tcp_stream> ws;
     beast::flat_buffer buffer;
     std::string write_buffer;
     std::queue<std::string> write_queue;
+    std::shared_ptr<arduino_messenger> arduino_connection;
 
 public:
-    explicit websocket_session(tcp::socket&& socket);
+    explicit websocket_session(
+        tcp::socket&& socket,
+		std::shared_ptr<arduino_messenger> arduino_connection
+    );
 
     template<class Body, class Allocator>
     void do_accept(

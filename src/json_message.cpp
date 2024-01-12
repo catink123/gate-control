@@ -52,3 +52,12 @@ json_message json_message::parse_message(
 		parsed_json["payload"]
 	);
 }
+
+std::string json_message::dump_message() const {
+	nlohmann::json json = {
+		{ "type", type_to_str(type) },
+		{ "payload", payload }
+	};
+
+	return json.dump();
+}
