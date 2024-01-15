@@ -9,6 +9,22 @@ void setup() {
   digitalWrite(13, LOW);
 }
 
+void flash() {
+  digitalWrite(13, HIGH);
+  delay(200);
+  digitalWrite(13, LOW);
+  delay(200);
+  digitalWrite(13, HIGH);
+  delay(200);
+  digitalWrite(13, LOW);
+  delay(200);
+  if (state) {
+    digitalWrite(13, HIGH);
+  } else {
+    digitalWrite(13, LOW);
+  }
+}
+
 void loop() {
   if (Serial.available() > 0) {
     String msg = Serial.readStringUntil('%');
@@ -29,6 +45,8 @@ void loop() {
       String msg;
       serializeJson(dyn_doc, msg);
       msg += '%';
+
+      flash();
 
       Serial.write(msg.c_str());
     } else {

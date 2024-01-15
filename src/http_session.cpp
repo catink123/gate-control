@@ -232,6 +232,37 @@ http::message_generator handle_request(
             return res;
         };
 
+    const auto unauthorized =
+        [&req] (beast::string_view target) {
+			http::response<http::string_body> res{
+				http::status::unauthorized,
+				req.version()
+			};
+
+			res.set(http::field::server, VERSION);
+			res.set(http::field::www_authenticate, "Basic realm=\"control\"");
+			res.keep_alive(req.keep_alive());
+			res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
+			res.prepare_payload();
+
+			return res;
+        };
+
+    const auto forbidden =
+        [&req](beast::string_view target) {
+			http::response<http::string_body> res{
+				http::status::forbidden,
+				req.version()
+			};
+
+			res.set(http::field::server, VERSION);
+			res.keep_alive(req.keep_alive());
+			res.body() = "Access to resource '" + std::string(target) + "' is forbidden";
+			res.prepare_payload();
+
+			return res;
+        };
+
     // make sure we can handle the request
     if (
         req.method() != http::verb::get &&
@@ -253,6 +284,22 @@ http::message_generator handle_request(
     std::string path = path_cat(doc_root, req.target());
     if (req.target().back() == '/') {
         path.append("index.html");
+    }
+
+    // if the request target is not the root page...
+    if (requires_auth(req)) {
+		// make sure the client has sufficient permissions
+		if (
+			req.find(http::field::authorization) == req.end()
+		) {
+			return unauthorized(req.target());
+		}
+
+		const auto permissions = check_auth(req, temp_auth_table);
+
+		if (!permissions) {
+			return unauthorized(req.target());
+		}
     }
 
     // open the file

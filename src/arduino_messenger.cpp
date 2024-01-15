@@ -6,7 +6,17 @@ arduino_messenger::arduino_messenger(
 	unsigned int baud_rate
 ) : com(io)
 {
-	com.open(std::string(device_name));
+	boost::system::error_code error;
+	com.open(std::string(device_name), error);
+
+	if (error) {
+		if (error == boost::system::errc::device_or_resource_busy)
+			throw open_error("serial port already in use");
+		if (error == boost::system::errc::no_such_file_or_directory)
+			throw open_error("serial port doesn't exist");
+		throw open_error(error.message().c_str());
+	}
+
 	com.set_option(net::serial_port_base::baud_rate(baud_rate));
 }
 
@@ -20,11 +30,9 @@ void arduino_messenger::run() {
 
 void arduino_messenger::do_read() {
 	net::async_read_until(com, buffer, '%',
-		std::bind(
+		beast::bind_front_handler(
 			&arduino_messenger::on_read,
-			shared_from_this(),
-			net::placeholders::error,
-			net::placeholders::bytes_transferred
+			shared_from_this()
 		)
 	);
 }
@@ -41,7 +49,10 @@ void arduino_messenger::on_read(
 
 	std::string message(reinterpret_cast<const char*>(buffer_data.data()), buffer_data.size());
 
+	std::lock_guard lock(imq_mutex);
 	incoming_message_queue.push(json_message::parse_message(message));
+
+	do_read();
 }
 
 void arduino_messenger::do_write() {

@@ -23,4 +23,11 @@ CPMAddPackage(
         "BOOST_ENABLE_CMAKE ON"
 )
 
+CPMAddPackage(
+    NAME bcrypt
+    VERSION 2.0
+    GITHUB_REPOSITORY "hilch/Bcrypt.cpp"
+    GIT_TAG "V2.0_NODEBCRYPT"
+)
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)

@@ -15,7 +15,8 @@ add_executable(
     json_message.cpp
     arduino_messenger.hpp
     arduino_messenger.cpp
-)
+    auth.hpp
+ )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 
@@ -28,6 +29,7 @@ target_link_libraries(
     ${PROJECT_NAME}
     Boost::beast
     nlohmann_json::nlohmann_json
+    bcrypt
 )
 
 # install server binary to bin

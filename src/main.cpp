@@ -12,52 +12,62 @@ const auto PORT = static_cast<unsigned short>(80);
 const auto DOC_ROOT = std::make_shared<std::string>("./client");
 const auto THREAD_COUNT = 8;
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <com-port>", argv[0]);
+        return 1;
+    }
+
     net::io_context ioc{THREAD_COUNT};
 
-    auto arduino_connection =
-        std::make_shared<arduino_messenger>(
-            ioc,
-            "COM7",
-            115200
-        );
+    try {
+		auto arduino_connection =
+			std::make_shared<arduino_messenger>(
+				ioc,
+				argv[1],
+				115200
+			);
 
-    arduino_connection->run();
+		arduino_connection->run();
 
-    std::make_shared<http_listener>(
-        ioc,
-        tcp::endpoint{ADDRESS, PORT},
-        DOC_ROOT,
-        arduino_connection
-    )->run();
+		std::make_shared<http_listener>(
+			ioc,
+			tcp::endpoint{ADDRESS, PORT},
+			DOC_ROOT,
+			arduino_connection
+		)->run();
 
-    std::cout << "Server started at " << ADDRESS << ":" << PORT << "." << std::endl;
+		std::cout << "Server started at " << ADDRESS << ":" << PORT << "." << std::endl;
 
-    // graceful shutdown
-    net::signal_set signals(ioc, SIGINT, SIGTERM);
-    signals.async_wait(
-        [&](const beast::error_code&, int) {
-            // abort all operations
-            ioc.stop();
-            std::cout << "Server is stopping..." << std::endl;
-        }
-    );
+		// graceful shutdown
+		net::signal_set signals(ioc, SIGINT, SIGTERM);
+		signals.async_wait(
+			[&](const beast::error_code&, int) {
+				// abort all operations
+				ioc.stop();
+				std::cout << "Server is stopping..." << std::endl;
+			}
+		);
 
-    std::vector<std::thread> v;
-    v.reserve(THREAD_COUNT - 1);
-    for (auto i = 0; i < THREAD_COUNT - 1; ++i) {
-        v.emplace_back(
-            [&ioc] {
-                ioc.run();
-            }
-        );
+		std::vector<std::thread> v;
+		v.reserve(THREAD_COUNT - 1);
+		for (auto i = 0; i < THREAD_COUNT - 1; ++i) {
+			v.emplace_back(
+				[&ioc] {
+					ioc.run();
+				}
+			);
+		}
+		ioc.run();
+
+		// if the program is here, the graceful shutdown is in progress, wait for all threads to end
+		for (std::thread& th : v) {
+			th.join();
+		}
     }
-    ioc.run();
-
-    // if the program is here, the graceful shutdown is in progress, wait for all threads to end
-    for (std::thread& th : v) {
-        th.join();
+    catch (const arduino_messenger::open_error& error) {
+        std::cerr << "Couldn't connect to the Arduino: " << error.what() << std::endl;
+        return 1;
     }
-
-    return 0;
+	return 0;
 }

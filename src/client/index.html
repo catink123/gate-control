@@ -6,36 +6,6 @@
     <title>Gate Control</title>
 </head>
 <body>
-    <h1>Test Client Page</h1>
-
-    <button disabled id="send-query">Query State</button>
-    <button disabled id="send-up">Send Raise</button>
-    <button disabled id="send-down">Send Lower</button>
-
-    <script>
-        let ws = new WebSocket("ws://" + location.host);
-
-        ws.addEventListener('message', e => {
-	    let msg = JSON.parse(e.data);
-	    if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
-	    if (msg.type == "query_state_result") alert(`Current Gate State: ${msg.payload}`);
-	    if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
-        });
-
-	function setListener(selector, type, listener) {
-            document.querySelector(selector).addEventListener(type, listener);
-        }
-
-        function bindMessage(selector, msgObj) {
-            setListener(selector, "click", () => ws.send(JSON.stringify(msgObj)));
-        }
-
-        ws.addEventListener('open', () => {
-            document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-            bindMessage("#send-query", { type: "query_state", payload: null });
-            bindMessage("#send-up", { type: "change_state", payload: true });
-            bindMessage("#send-down", { type: "change_state", payload: false });
-        });
-    </script>
+    <h1>Login</h1>
 </body>
 </html>

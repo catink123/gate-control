@@ -31,10 +31,10 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: server-debug
-        path: out/windows-x64-debug/Debug
+        path: out/windows-x64-debug/src/Debug
     
     - name: Upload Release artifacts
       uses: actions/upload-artifact@v3
       with:
         name: server-release
-        path: out/windows-x64-release/Release
+        path: out/windows-x64-release/src/Release

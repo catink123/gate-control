@@ -24,6 +24,11 @@ public:
 	std::queue<json_message> incoming_message_queue;
 	std::mutex imq_mutex;
 
+	class open_error : public std::runtime_error {
+	public:
+		open_error(const char* what) : std::runtime_error(what) {}
+	};
+
 	arduino_messenger(
 		net::io_context& io,
 		std::string_view device_name,
