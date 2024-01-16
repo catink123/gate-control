@@ -4,34 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
+
     <style>
+        body {
+            color: white;
+            background: hsl(221, 33%, 13%);
+            font-family: sans-serif;
+            display: grid;
+            place-items: center;
+            height: 100dvh;
+            margin: 0;
+        }
+
+        body > div {
+            display: grid;
+            place-items: center;
+            gap: 10px;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
         .state {
             border-radius: 50px;
-            padding: 2px 5px;
+            display: block;
+            width: 16px;
+            height: 16px;
+            transition-duration: .5s;
         }
 
         .state.unknown {
-            background: yellow;
+            background: rgb(255, 255, 82);
         }
 
         .state.raised {
-            background: lime;
+            background: rgb(79, 235, 79);
         }
 
         .state.lowered {
-            background: red;
-            color: white;
+            background: rgb(255, 70, 70);
+        }
+
+        .state-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 13px 15px;
+            border: 1px solid hsl(221, 33%, 30%);
+            border-radius: 15px;
+        }
+
+        p {
+            margin: 0;
         }
     </style>
 </head>
 <body>
-    <h1>View Page</h1>
+    <div>
+        <h1>Gate State</h1>
 
-    <p>Current state: <span class="state unknown">Unknown</span></p>
+        <div class="state-block">
+            <span class="state unknown"></span>
+            <p>Unknown</p>
+        </div>
+    </div>
 
     <script>
         let ws = new WebSocket("ws://" + location.host + location.pathname);
         const stateSpan = document.querySelector("span.state");
+        const stateText = document.querySelector("div.state-block > p");
 
         ws.addEventListener('message', e => {
             let msg = JSON.parse(e.data);
@@ -39,10 +81,10 @@
             if (msg.type == "query_state_result") {
                 if (msg.payload == true) {
                     stateSpan.className = "state raised";
-                    stateSpan.innerText = "Raised";
+                    stateText.innerText = "Raised";
                 } else if (msg.payload == false) {
                     stateSpan.className = "state lowered";
-                    stateSpan.innerText = "Lowered";
+                    stateText.innerText = "Lowered";
                 }
             }
             if (msg.type == "availability") alert(`Availability: ${msg.payload}`);

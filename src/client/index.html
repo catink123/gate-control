@@ -4,11 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
+    
+    <style>
+        body {
+            color: white;
+            background: hsl(221, 33%, 13%);
+            font-family: sans-serif;
+            display: grid;
+            place-items: center;
+            height: 100dvh;
+            margin: 0;
+        }
+
+        body > div {
+            display: grid;
+            place-items: center;
+            gap: 10px;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        a {
+            border: 1px solid hsl(221, 33%, 30%);
+            padding: 10px 15px;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            transition-duration: .1s;
+            background:hsl(221, 33%, 15%);
+        }
+
+        a:hover {
+            background:hsl(221, 33%, 30%);
+        }
+
+        a:active {
+            background:hsl(221, 33%, 10%);
+        }
+
+        div.linkbar {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Home Page</h1>
-    <a href="/view">View</a>
-    <a href="/control">Control</a>
+    <div>
+        <h1>Gate Control</h1>
+
+        <div class="linkbar">
+            <a href="/view">View</a>
+            <a href="/control">Control</a>
+        </div>
+    </div>
 
     <!--<h1>Login Test</h1>
     <div>
