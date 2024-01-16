@@ -17,7 +17,15 @@ arduino_messenger::arduino_messenger(
 		throw open_error(error.message().c_str());
 	}
 
-	com.set_option(net::serial_port_base::baud_rate(baud_rate));
+	com.set_option(
+		net::serial_port_base::baud_rate(baud_rate)
+	);
+	// enable DTR (Data Terminal Ready) for reading from the COM-port to work
+	com.set_option(
+		net::serial_port_base::flow_control(
+			net::serial_port_base::flow_control::hardware
+		)
+	);
 }
 
 void arduino_messenger::run() {
@@ -29,7 +37,9 @@ void arduino_messenger::run() {
 }
 
 void arduino_messenger::do_read() {
-	net::async_read_until(com, buffer, '%',
+	net::streambuf::mutable_buffers_type temp_mut_buf = buffer.prepare(MAX_MESSAGE_LENGTH);
+
+	com.async_read_some(net::buffer(temp_mut_buf),
 		beast::bind_front_handler(
 			&arduino_messenger::on_read,
 			shared_from_this()
@@ -45,9 +55,16 @@ void arduino_messenger::on_read(
 		return;
 	}
 
-	auto buffer_data = buffer.data();
+	buffer.commit(bytes_transferred);
 
-	std::string message(reinterpret_cast<const char*>(buffer_data.data()), buffer_data.size());
+	std::string message(
+		reinterpret_cast<const char*>(buffer.data().data()), 
+		buffer.data().size()
+	);
+
+	buffer.consume(bytes_transferred);
+
+	std::cout << "Read message: " << message << std::endl;
 
 	std::lock_guard lock(imq_mutex);
 	incoming_message_queue.push(json_message::parse_message(message));
@@ -57,7 +74,7 @@ void arduino_messenger::on_read(
 
 void arduino_messenger::do_write() {
 	if (!outgoing_message_queue.empty()) {
-		outgoing_message_buffer = outgoing_message_queue.front().dump_message() + '%';
+		outgoing_message_buffer = outgoing_message_queue.front().dump_message();
 		outgoing_message_queue.pop();
 
 		std::cout << "Sending message: " << outgoing_message_buffer << std::endl;
