@@ -6,6 +6,46 @@
     <title>Gate Control</title>
 </head>
 <body>
-    <h1>Login</h1>
+    <h1>Home Page</h1>
+    <a href="/view">View</a>
+    <a href="/control">Control</a>
+
+    <!--<h1>Login Test</h1>
+    <div>
+        <p>
+            <label for="login">Login </label>
+            <input type="text" id="login" />
+        </p>
+        <p>
+            <label for="password">Password </label>
+            <input type="password" id="password" />
+        </p>
+
+        <button id="login-view">View</button>
+        <button id="login-control">Control</button>
+    </div>
+
+    <script>
+        const loginInput = document.querySelector("input#login");
+        const passwordInput = document.querySelector("input#password");
+
+        function login(type) {
+            const auth = btoa(`${loginInput.value}:${passwordInput.value}`);
+            const url = `${location.protocol}//${location.host}/${type}`;
+            fetch(url, {
+                headers: {
+                    'Authorization': `Basic ${auth}`
+                }
+            }).then(res => {
+                if (res.ok) {
+                    location.href = url;
+                }
+                throw res;
+            }).catch(err => alert(err));
+        }
+
+        document.querySelector("#login-view").addEventListener("click", () => login("view"));
+        document.querySelector("#login-control").addEventListener("click", () => login("control"));
+    </script>-->
 </body>
 </html>

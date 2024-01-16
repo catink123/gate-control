@@ -287,14 +287,8 @@ http::message_generator handle_request(
         return bad_request("Illegal request target");
     }
 
-    // build requested file path
-    std::string path = path_cat(doc_root, req.target());
-    if (req.target().back() == '/') {
-        path.append("index.html");
-    }
-
     // if the request target is not the root page...
-    if (requires_auth(req)) {
+    if (const auto endpoint_perms = get_endpoint_permissions(req)) {
 		// make sure the client has sufficient permissions
 		if (
 			req.find(http::field::authorization) == req.end()
@@ -302,11 +296,33 @@ http::message_generator handle_request(
 			return unauthorized(req.target());
 		}
 
-		const auto permissions = check_auth(req, temp_auth_table);
+		const auto permissions = get_auth(req, temp_auth_table);
 
 		if (!permissions) {
 			return unauthorized(req.target());
 		}
+
+        if (permissions != endpoint_perms) {
+            return forbidden(req.target());
+        }
+    }
+
+    // build requested file path
+    std::string path = path_cat(doc_root, req.target());
+
+    if (
+        req.target().back() == '/'
+	) {
+        path.append("index.html");
+    }
+    else if (
+        std::find(
+            indexable_endpoints.begin(),
+            indexable_endpoints.end(),
+            req.target()
+        ) != indexable_endpoints.end()
+	) {
+        path.append("/index.html");
     }
 
     // open the file

@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <chrono>
+#include <array>
 #include "websocket_session.hpp"
 #include "arduino_messenger.hpp"
 #include "common_state.hpp"
@@ -22,12 +23,7 @@ std::string path_cat(
     beast::string_view path
 );
 
-// catink123:testpassword123
-// guest:guest
-const std::unordered_map<std::string, auth_data> temp_auth_table = {
-    { "catink123", auth_data(Control, "$2a$10$o12u27uUOjD6rJ0dlEE/EuL8EqGa7y8iwZqAp3wF0WBS4.Vu/9jhK") },
-    { "guest", auth_data(View, "$2a$10$vYQHg8mBFTle1OzRp31MsOMvrmfQ52xfHUGFoi3aTe6Vp8GhDRzBy") }
-};
+const std::array<std::string, 3> indexable_endpoints = { "/", "/view", "/control" };
 
 // handle given request by returning an appropriate response
 template <class Body, class Allocator>

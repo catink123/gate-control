@@ -7,13 +7,47 @@
 #include <bcrypt.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <array>
+#include <unordered_map>
 
 namespace base64 = beast::detail::base64;
 
 enum AuthorizationType {
     Control,
-    View
+    View,
+    Blocked
 };
+
+const std::unordered_map<std::string, std::optional<AuthorizationType>> endpoint_map = {
+    { "/", std::nullopt },
+    { "/control", Control },
+    { "/view", View }
+};
+
+template <class Body, class Allocator>
+std::optional<AuthorizationType> get_endpoint_permissions(
+	const http::request<Body, http::basic_fields<Allocator>>& req
+) {
+    auto& target = req.target();
+    std::size_t last_delimeter = target.rfind('/');
+    std::string endpoint;
+    if (last_delimeter == 0) {
+        if (target.size() > 1) {
+            endpoint = target;
+        }
+        else {
+			endpoint = "/";
+        }
+    }
+    else {
+        endpoint = target.substr(0, last_delimeter);
+    }
+
+    if (endpoint_map.find(endpoint) == endpoint_map.end()) {
+        return Blocked;
+    }
+
+    return endpoint_map.at(endpoint);
+}
 
 struct auth_data {
     AuthorizationType permissions;
@@ -25,8 +59,15 @@ struct auth_data {
     ) : permissions(permissions), password_hash(password_hash) {}
 };
 
+// catink123:testpassword123
+// guest:guest
+const std::unordered_map<std::string, auth_data> temp_auth_table = {
+    { "catink123", auth_data(Control, "$2a$10$o12u27uUOjD6rJ0dlEE/EuL8EqGa7y8iwZqAp3wF0WBS4.Vu/9jhK") },
+    { "guest", auth_data(View, "$2a$10$vYQHg8mBFTle1OzRp31MsOMvrmfQ52xfHUGFoi3aTe6Vp8GhDRzBy") }
+};
+
 template <class Body, class Allocator>
-std::optional<AuthorizationType> check_auth(
+std::optional<AuthorizationType> get_auth(
 	const http::request<Body, http::basic_fields<Allocator>>& req,
 	const std::unordered_map<std::string, auth_data>& auth_table
 ) {
@@ -67,19 +108,6 @@ std::optional<AuthorizationType> check_auth(
     else {
         return std::nullopt;
     }
-}
-
-const std::array<std::string, 3> unauthable_resources = { "/", "/index.html", "/favicon.ico" };
-
-template <class Body, class Allocator>
-bool requires_auth(
-    const http::request<Body, http::basic_fields<Allocator>>& req
-) {
-    return std::find(
-        unauthable_resources.begin(), 
-        unauthable_resources.end(), 
-        req.target()
-    ) == unauthable_resources.end();
 }
 
 #endif

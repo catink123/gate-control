@@ -9,6 +9,7 @@
 #include <thread>
 #include "json_message.hpp"
 #include "arduino_messenger.hpp"
+#include "auth.hpp"
 
 class websocket_session : public std::enable_shared_from_this<websocket_session> {
     websocket::stream<beast::tcp_stream> ws;
@@ -16,6 +17,7 @@ class websocket_session : public std::enable_shared_from_this<websocket_session>
     std::string write_buffer;
     std::queue<std::string> write_queue;
     std::shared_ptr<arduino_messenger> arduino_connection;
+    AuthorizationType permissions = Blocked;
 
 public:
     explicit websocket_session(
@@ -27,6 +29,13 @@ public:
     void do_accept(
         http::request<Body, http::basic_fields<Allocator>> req
     ) {
+        auto auth = get_auth(req, temp_auth_table);
+        if (auth == std::nullopt || auth == Blocked) {
+            return;
+        }
+
+        permissions = auth.value();
+
         ws.set_option(
             websocket::stream_base::timeout::suggested(
                 beast::role_type::server

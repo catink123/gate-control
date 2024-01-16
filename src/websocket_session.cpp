@@ -100,15 +100,17 @@ void websocket_session::on_write(
 }
 
 void websocket_session::queue_message(std::string_view message) {
-    write_queue.push(std::string(message));
+	write_queue.push(std::string(message));
 }
 
 void websocket_session::handle_message(std::string_view message) {
-    try {
-        auto parsed_msg = json_message::parse_message(message);
+    if (permissions == Control) {
+		try {
+			auto parsed_msg = json_message::parse_message(message);
 
-        if (parsed_msg.type == json_message::QueryState || parsed_msg.type == json_message::ChangeState)
-            arduino_connection->send_message(parsed_msg);
+			if (parsed_msg.type == json_message::QueryState || parsed_msg.type == json_message::ChangeState)
+				arduino_connection->send_message(parsed_msg);
+		}
+		catch (...) {}
     }
-    catch (...) {}
 }
