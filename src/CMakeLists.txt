@@ -16,7 +16,9 @@ add_executable(
     arduino_messenger.hpp
     arduino_messenger.cpp
     auth.hpp
- )
+    common_state.hpp
+    common_state.cpp
+)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 

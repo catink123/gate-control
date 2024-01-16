@@ -3,9 +3,11 @@
 http_session::http_session(
     tcp::socket&& socket,
     const std::shared_ptr<const std::string>& doc_root,
+    std::shared_ptr<common_state> comstate,
     std::shared_ptr<arduino_messenger> arduino_connection
 ) : stream(std::move(socket)),
     doc_root(doc_root),
+    comstate(comstate),
     arduino_connection(arduino_connection)
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
@@ -58,10 +60,15 @@ void http_session::on_read(
     // if the request is a WebSocket Upgrade
     if (websocket::is_upgrade(parser->get())) {
         // create a new websocket session, moving the socket and request into it
-        std::make_shared<websocket_session>(
-            stream.release_socket(),
-            arduino_connection
-        )->do_accept(parser->release());
+        auto session = 
+            std::make_shared<websocket_session>(
+				stream.release_socket(),
+                arduino_connection
+			);
+
+        session->do_accept(parser->release());
+        comstate->add_session(session);
+        
         return;
     }
 

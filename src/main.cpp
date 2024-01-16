@@ -6,6 +6,7 @@
 #include <thread>
 #include "common.hpp"
 #include "http_listener.hpp"
+#include "common_state.hpp"
 
 const auto ADDRESS = net::ip::make_address_v4("0.0.0.0");
 const auto PORT = static_cast<unsigned short>(80);
@@ -30,10 +31,19 @@ int main(int argc, char* argv[]) {
 
 		arduino_connection->run();
 
+		auto comstate = 
+			std::make_shared<common_state>(
+				ioc,
+				arduino_connection
+			);
+
+		comstate->run();
+
 		std::make_shared<http_listener>(
 			ioc,
 			tcp::endpoint{ADDRESS, PORT},
 			DOC_ROOT,
+			comstate,
 			arduino_connection
 		)->run();
 

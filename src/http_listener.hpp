@@ -6,12 +6,13 @@
 #include <string>
 #include "common.hpp"
 #include "http_session.hpp"
-#include "arduino_messenger.hpp"
+#include "common_state.hpp"
 
 class http_listener : public std::enable_shared_from_this<http_listener> {
     net::io_context& ioc;
     tcp::acceptor acceptor;
     std::shared_ptr<const std::string> doc_root;
+    std::shared_ptr<common_state> comstate;
     std::shared_ptr<arduino_messenger> arduino_connection;
     
 public:
@@ -19,7 +20,8 @@ public:
         net::io_context& ioc,
         tcp::endpoint endpoint,
         const std::shared_ptr<const std::string>& doc_root,
-        std::shared_ptr<arduino_messenger> arduino_connection
+        std::shared_ptr<common_state> comstate,
+		std::shared_ptr<arduino_messenger> arduino_connection
     );
 
     void run();

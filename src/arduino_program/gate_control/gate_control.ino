@@ -10,9 +10,21 @@ const int capacity = 100;
 StaticJsonDocument<capacity> doc;
 bool state = false;
 
+void send_state() {
+  DynamicJsonDocument dyn_doc(100);
+  dyn_doc[TYPE] = QUERY_STATE_RESULT;
+  dyn_doc[PAYLOAD] = state;
+
+  String msg;
+  serializeJson(dyn_doc, msg);
+
+  Serial.write(msg.c_str());
+}
+
 void change_state(bool new_state, bool persist_change = true) {
   if (persist_change) {
     state = new_state;
+    send_state();
   }
 
   if (new_state) {
@@ -42,14 +54,7 @@ void loop() {
         change_state(false);
       }
     } else if (doc[TYPE] == QUERY_STATE) {
-      DynamicJsonDocument dyn_doc(100);
-      dyn_doc[TYPE] = QUERY_STATE_RESULT;
-      dyn_doc[PAYLOAD] = state;
-
-      String msg;
-      serializeJson(dyn_doc, msg);
-
-      Serial.write(msg.c_str());
+      send_state();
     } else {
       Serial.write("{\"type\": \"error\", \"payload\": \"unknown_command\"}");
     }

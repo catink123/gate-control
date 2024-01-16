@@ -51,14 +51,14 @@ public:
         );
     }
 
+    void queue_message(std::string_view message);
+
 private:
     void on_accept(beast::error_code ec);
     void do_write();
     void do_read();
     void on_write(beast::error_code ec, std::size_t bytes_transferred);
     void on_read(beast::error_code ec, std::size_t bytes_transferred);
-
-    void queue_message(std::string_view message);
 
     void handle_message(std::string_view message);
 };

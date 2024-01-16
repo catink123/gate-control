@@ -4,25 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
+    <style>
+        .state {
+            border-radius: 50px;
+            padding: 2px 5px;
+        }
+
+        .state.unknown {
+            background: yellow;
+        }
+
+        .state.raised {
+            background: lime;
+        }
+
+        .state.lowered {
+            background: red;
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <h1>Control Page</h1>
 
-    <button disabled id="send-query">Query State</button>
     <button disabled id="send-up">Send Raise</button>
     <button disabled id="send-down">Send Lower</button>
 
+    <p>Current state: <span class="state unknown">Unknown</span></p>
+
     <script>
         let ws = new WebSocket("ws://" + location.host);
+        const stateSpan = document.querySelector("span.state");
 
         ws.addEventListener('message', e => {
-	    let msg = JSON.parse(e.data);
-	    if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
-	    if (msg.type == "query_state_result") alert(`Current Gate State: ${msg.payload}`);
-	    if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
+            let msg = JSON.parse(e.data);
+            if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
+            if (msg.type == "query_state_result") {
+                if (msg.payload == true) {
+                    stateSpan.className = "state raised";
+                    stateSpan.innerText = "Raised";
+                } else if (msg.payload == false) {
+                    stateSpan.className = "state lowered";
+                    stateSpan.innerText = "Lowered";
+                }
+            }
+            if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
         });
 
-	function setListener(selector, type, listener) {
+	    function setListener(selector, type, listener) {
             document.querySelector(selector).addEventListener(type, listener);
         }
 
@@ -32,7 +61,6 @@
 
         ws.addEventListener('open', () => {
             document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-            bindMessage("#send-query", { type: "query_state", payload: null });
             bindMessage("#send-up", { type: "change_state", payload: true });
             bindMessage("#send-down", { type: "change_state", payload: false });
         });

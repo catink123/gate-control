@@ -51,6 +51,11 @@ void arduino_messenger::on_read(
 	const boost::system::error_code& ec,
 	std::size_t bytes_transferred
 ) {
+	// this doesn't work
+	if (ec && !com.is_open()) {
+		std::cout << "COM-port closed." << std::endl;
+	}
+
 	if (ec || bytes_transferred == 0) {
 		return;
 	}
@@ -64,8 +69,6 @@ void arduino_messenger::on_read(
 
 	buffer.consume(bytes_transferred);
 
-	std::cout << "Read message: " << message << std::endl;
-
 	std::lock_guard lock(imq_mutex);
 	incoming_message_queue.push(json_message::parse_message(message));
 
@@ -76,8 +79,6 @@ void arduino_messenger::do_write() {
 	if (!outgoing_message_queue.empty()) {
 		outgoing_message_buffer = outgoing_message_queue.front().dump_message();
 		outgoing_message_queue.pop();
-
-		std::cout << "Sending message: " << outgoing_message_buffer << std::endl;
 
 		net::async_write(
 			com,
@@ -108,7 +109,13 @@ void arduino_messenger::on_write(
 	outgoing_message_buffer.clear();
 
 	if (ec) {
-		std::cerr << "Couldn't write to COM-port: " << ec.message() << std::endl;
+		// this doesn't work, else-clause called
+		if (!com.is_open()) {
+			std::cerr << "COM-port closed." << std::endl;
+		}
+		else {
+			std::cerr << "Couldn't write to COM-port: " << ec.message() << std::endl;
+		}
 		return;
 	}
 

@@ -24,7 +24,7 @@ public:
 
 	json_message(
 		const MessageType type,
-		nlohmann::json payload
+		nlohmann::json payload = nullptr
 	) : type(type), payload(payload) {}
 
 	static std::string type_to_str(const MessageType& type);	

@@ -8,6 +8,7 @@
 #include <chrono>
 #include "websocket_session.hpp"
 #include "arduino_messenger.hpp"
+#include "common_state.hpp"
 #include "auth.hpp"
 
 namespace base64 = beast::detail::base64;
@@ -40,6 +41,7 @@ class http_session : public std::enable_shared_from_this<http_session> {
     beast::flat_buffer buffer;
     std::shared_ptr<const std::string> doc_root;
 
+    std::shared_ptr<common_state> comstate;
     std::shared_ptr<arduino_messenger> arduino_connection;
 
     // a queue to prevent overload
@@ -52,6 +54,7 @@ public:
     http_session(
         tcp::socket&& socket,
         const std::shared_ptr<const std::string>& doc_root,
+		std::shared_ptr<common_state> comstate,
 		std::shared_ptr<arduino_messenger> arduino_connection
     );
 
