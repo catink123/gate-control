@@ -29,7 +29,8 @@ const std::array<std::string, 3> indexable_endpoints = { "/", "/view", "/control
 template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
-    http::request<Body, http::basic_fields<Allocator>>&& req
+    http::request<Body, http::basic_fields<Allocator>>&& req,
+    std::shared_ptr<auth_table_t> auth_table
 );
 
 class http_session : public std::enable_shared_from_this<http_session> {
@@ -39,6 +40,7 @@ class http_session : public std::enable_shared_from_this<http_session> {
 
     std::shared_ptr<common_state> comstate;
     std::shared_ptr<arduino_messenger> arduino_connection;
+    std::shared_ptr<auth_table_t> auth_table;
 
     // a queue to prevent overload
     static constexpr std::size_t queue_limit = 16;
@@ -51,7 +53,8 @@ public:
         tcp::socket&& socket,
         const std::shared_ptr<const std::string>& doc_root,
 		std::shared_ptr<common_state> comstate,
-		std::shared_ptr<arduino_messenger> arduino_connection
+		std::shared_ptr<arduino_messenger> arduino_connection,
+        std::shared_ptr<auth_table_t> auth_table
     );
 
     void run();

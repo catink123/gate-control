@@ -14,6 +14,7 @@ class http_listener : public std::enable_shared_from_this<http_listener> {
     std::shared_ptr<const std::string> doc_root;
     std::shared_ptr<common_state> comstate;
     std::shared_ptr<arduino_messenger> arduino_connection;
+    std::shared_ptr<auth_table_t> auth_table;
     
 public:
     http_listener(
@@ -21,7 +22,8 @@ public:
         tcp::endpoint endpoint,
         const std::shared_ptr<const std::string>& doc_root,
         std::shared_ptr<common_state> comstate,
-		std::shared_ptr<arduino_messenger> arduino_connection
+        std::shared_ptr<arduino_messenger> arduino_connection,
+        std::shared_ptr<auth_table_t> auth_table
     );
 
     void run();

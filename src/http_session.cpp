@@ -4,11 +4,13 @@ http_session::http_session(
     tcp::socket&& socket,
     const std::shared_ptr<const std::string>& doc_root,
     std::shared_ptr<common_state> comstate,
-    std::shared_ptr<arduino_messenger> arduino_connection
+    std::shared_ptr<arduino_messenger> arduino_connection,
+    std::shared_ptr<auth_table_t> auth_table
 ) : stream(std::move(socket)),
     doc_root(doc_root),
     comstate(comstate),
-    arduino_connection(arduino_connection)
+    arduino_connection(arduino_connection),
+    auth_table(auth_table)
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
     response_queue.reserve(queue_limit);
@@ -66,7 +68,7 @@ void http_session::on_read(
                 arduino_connection
 			);
 
-        session->do_accept(parser->release());
+        session->do_accept(parser->release(), auth_table);
         comstate->add_session(session);
         
         return;
@@ -74,7 +76,7 @@ void http_session::on_read(
 
     // send the response back
     queue_write(
-        handle_request(*doc_root, parser->release())
+        handle_request(*doc_root, parser->release(), auth_table)
     );
 
     // if the response queue is not at it's limit, try to add another response to the queue
@@ -189,7 +191,8 @@ beast::string_view mime_type(
 template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
-    http::request<Body, http::basic_fields<Allocator>>&& req
+    http::request<Body, http::basic_fields<Allocator>>&& req,
+    std::shared_ptr<auth_table_t> auth_table
 ) {
     const auto bad_request = 
         [&req] (beast::string_view why) {
@@ -296,7 +299,7 @@ http::message_generator handle_request(
 			return unauthorized(req.target());
 		}
 
-		const auto permissions = get_auth(req, temp_auth_table);
+		const auto permissions = get_auth(req, *auth_table);
 
 		if (!permissions) {
 			return unauthorized(req.target());

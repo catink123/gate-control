@@ -8,13 +8,16 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <array>
 #include <unordered_map>
+#include <filesystem>
+#include <fstream>
 
 namespace base64 = beast::detail::base64;
+namespace fs = std::filesystem;
 
 enum AuthorizationType {
-    Control,
-    View,
-    Blocked
+    View = 0,
+    Control = 1,
+    Blocked = 2
 };
 
 const std::unordered_map<std::string, std::optional<AuthorizationType>> endpoint_map = {
@@ -59,12 +62,7 @@ struct auth_data {
     ) : permissions(permissions), password_hash(password_hash) {}
 };
 
-// catink123:testpassword123
-// guest:guest
-const std::unordered_map<std::string, auth_data> temp_auth_table = {
-    { "catink123", auth_data(Control, "$2a$10$o12u27uUOjD6rJ0dlEE/EuL8EqGa7y8iwZqAp3wF0WBS4.Vu/9jhK") },
-    { "guest", auth_data(View, "$2a$10$vYQHg8mBFTle1OzRp31MsOMvrmfQ52xfHUGFoi3aTe6Vp8GhDRzBy") }
-};
+typedef std::unordered_map<std::string, auth_data> auth_table_t;
 
 template <class Body, class Allocator>
 std::optional<AuthorizationType> get_auth(
@@ -109,5 +107,8 @@ std::optional<AuthorizationType> get_auth(
         return std::nullopt;
     }
 }
+
+std::optional<std::unordered_map<std::string, auth_data>>
+open_auth_table_from_file(fs::path file_path);
 
 #endif

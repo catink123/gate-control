@@ -16,6 +16,7 @@ add_executable(
     arduino_messenger.hpp
     arduino_messenger.cpp
     auth.hpp
+    auth.cpp
     common_state.hpp
     common_state.cpp
 )
@@ -34,10 +35,15 @@ target_link_libraries(
     bcrypt
 )
 
-# install server binary to bin
+# password-hash generator
+add_executable(password_hasher hash_generator.cpp)
+set_property(TARGET password_hasher PROPERTY CXX_STANDARD 17)
+target_link_libraries(password_hasher bcrypt)
+
+# install the server binary and the password hasher to bin
 
 install(
-    TARGETS ${PROJECT_NAME}
+    TARGETS ${PROJECT_NAME} password_hasher
     RUNTIME DESTINATION bin
 )
 

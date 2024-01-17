@@ -14,10 +14,29 @@ const auto DOC_ROOT = std::make_shared<std::string>("./client");
 const auto THREAD_COUNT = 8;
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        printf("Usage: %s <com-port>", argv[0]);
+    if (argc < 3) {
+        printf("Usage: %s <com-port> <auth-file>", argv[0]);
         return 1;
     }
+
+	fs::path auth_file_path;
+
+	try {
+		auth_file_path = argv[2];
+	}
+	catch (...) {
+		std::cerr << "Invalid auth-file path." << std::endl;
+		return 1;
+	}
+
+	auto auth_table = open_auth_table_from_file(auth_file_path);
+	if (!auth_table) {
+		std::cerr << "Couldn't open the supplied auth-file." << std::endl;
+		return 1;
+	}
+
+	std::shared_ptr<auth_table_t> auth_table_ptr = 
+		std::make_shared<auth_table_t>(std::move(auth_table.value()));
 
     net::io_context ioc{THREAD_COUNT};
 
@@ -44,7 +63,8 @@ int main(int argc, char* argv[]) {
 			tcp::endpoint{ADDRESS, PORT},
 			DOC_ROOT,
 			comstate,
-			arduino_connection
+			arduino_connection,
+			auth_table_ptr
 		)->run();
 
 		std::cout << "Server started at " << ADDRESS << ":" << PORT << "." << std::endl;

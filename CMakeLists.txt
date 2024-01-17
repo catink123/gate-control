@@ -28,6 +28,8 @@ CPMAddPackage(
     VERSION 2.0
     GITHUB_REPOSITORY "hilch/Bcrypt.cpp"
     GIT_TAG "V2.0_NODEBCRYPT"
+    OPTIONS
+        "BUILD_TESTS OFF"
 )
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
