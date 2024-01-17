@@ -57,7 +57,7 @@
             transition-duration: .5s;
         }
 
-        .state.unknown {
+        .state.indeterminate {
             background: rgb(255, 255, 82);
         }
 
@@ -102,7 +102,7 @@
         <div class="state-container">
             <p>Gate state: </p>
             <div class="state-block">
-                <span class="state unknown"></span>
+                <span class="state indeterminate"></span>
                 <p>Unknown</p>
             </div>
         </div>
@@ -117,12 +117,18 @@
             let msg = JSON.parse(e.data);
             if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
             if (msg.type == "query_state_result") {
-                if (msg.payload == true) {
+                if (msg.payload === "raised") {
                     stateSpan.className = "state raised";
                     stateText.innerText = "Raised";
-                } else if (msg.payload == false) {
+                } else if (msg.payload === "lowered") {
                     stateSpan.className = "state lowered";
                     stateText.innerText = "Lowered";
+                } else if (msg.payload === "raising") {
+                    stateSpan.className = "state indeterminate";
+                    stateText.innerText = "Raising...";
+                } else if (msg.payload === "lowering") {
+                    stateSpan.className = "state indeterminate";
+                    stateText.innerText = "Lowering...";
                 }
             }
             if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
