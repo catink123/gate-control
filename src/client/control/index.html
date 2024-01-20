@@ -1,152 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
 
     <style>
-        body {
-            color: white;
-            background: hsl(221, 33%, 13%);
-            font-family: sans-serif;
-            display: grid;
-            place-items: center;
-            height: 100dvh;
-            margin: 0;
-        }
+    body {
+      color: white;
+      background: hsl(221, 33%, 13%);
+      font-family: sans-serif;
+      display: grid;
+      place-items: center;
+      height: 100dvh;
+      margin: 0;
+    }
 
-        body > div {
-            display: grid;
-            place-items: center;
-            gap: 10px;
-        }
+    body > div {
+      display: grid;
+      place-items: center;
+      gap: 10px;
+    }
 
-        h1 {
-            margin: 0;
-        }
+    h1 {
+      margin: 0;
+    }
 
-        button {
-            border: 1px solid hsl(221, 33%, 30%);
-            padding: 10px 15px;
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            transition-duration: .1s;
-            background:hsl(221, 33%, 15%);
-        }
+    button {
+      border: 1px solid hsl(221, 33%, 30%);
+      padding: 10px 15px;
+      color: white;
+      text-decoration: none;
+      border-radius: 50px;
+      transition-duration: .1s;
+      background:hsl(221, 33%, 15%);
+    }
 
-        button:hover {
-            background:hsl(221, 33%, 30%);
-        }
+    button:hover {
+      background:hsl(221, 33%, 30%);
+    }
 
-        button:active {
-            background:hsl(221, 33%, 10%);
-        }
+    button:active {
+      background:hsl(221, 33%, 10%);
+    }
 
-        div.controlbar {
-            display: flex;
-            gap: 10px;
-        }
+    button:disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
 
-        .state {
-            border-radius: 50px;
-            display: block;
-            width: 16px;
-            height: 16px;
-            transition-duration: .5s;
-        }
+    div.controlbar {
+      display: flex;
+      gap: 10px;
+    }
 
-        .state.indeterminate {
-            background: rgb(255, 255, 82);
-        }
+    .state {
+      border-radius: 50px;
+      display: block;
+      width: 16px;
+      height: 16px;
+      transition-duration: .5s;
+      background: hsl(221, 33%, 30%);
+    }
 
-        .state.raised {
-            background: rgb(79, 235, 79);
-        }
+    .state.indeterminate {
+      background: rgb(255, 255, 82);
+    }
 
-        .state.lowered {
-            background: rgb(255, 70, 70);
-        }
+    .state.raised {
+      background: rgb(79, 235, 79);
+    }
 
-        .state-block {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 13px 15px;
-            border: 1px solid hsl(221, 33%, 30%);
-            border-radius: 15px;
-        }
+    .state.lowered {
+      background: rgb(255, 70, 70);
+    }
 
-        .state-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding-top: 10px;
-        }
+    .state-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 15px;
+      border: 1px solid hsl(221, 33%, 30%);
+      border-radius: 15px;
+    }
 
-        p {
-            margin: 0;
-        }
+    .state-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding-top: 10px;
+    }
+
+    p {
+      margin: 0;
+    }
     </style>
-</head>
-<body>
+
+    <script>
+    const message_responses = {
+      raised: {
+        style: 'raised',
+        text: 'Raised'
+      },
+      raising: {
+        style: 'indeterminate',
+        text: 'Raising...'
+      },
+      lowered: {
+        style: 'lowered',
+        text: 'Lowered'
+      },
+      lowering: {
+        style: 'indeterminate',
+        text: 'Lowering...'
+      }
+    };
+    </script>
+  </head>
+  <body>
     <div>
-        <h1>Control Page</h1>
+      <h1>Control Page</h1>
 
-        <div class="controlbar">
-            <button disabled id="send-up">Raise</button>
-            <button disabled id="send-down">Lower</button>
-        </div>
+      <div class="controlbar">
+        <button disabled id="send-up">Raise</button>
+        <button disabled id="send-down">Lower</button>
+      </div>
 
-        <div class="state-container">
-            <p>Gate state: </p>
-            <div class="state-block">
-                <span class="state indeterminate"></span>
-                <p>Unknown</p>
-            </div>
+      <div class="state-container">
+        <p>Gate state: </p>
+        <div class="state-block">
+          <span class="state"></span>
+          <p>Connecting...</p>
         </div>
+      </div>
     </div>
 
     <script>
-        let ws = new WebSocket("ws://" + location.host + location.pathname);
-        const stateSpan = document.querySelector("span.state");
-        const stateText = document.querySelector("div.state-block > p");
+    let ws = new WebSocket("ws://" + location.host + location.pathname);
+    const stateSpan = document.querySelector("span.state");
+    const stateText = document.querySelector("div.state-block > p");
 
-        ws.addEventListener('message', e => {
-            let msg = JSON.parse(e.data);
-            if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
-            if (msg.type == "query_state_result") {
-                if (msg.payload === "raised") {
-                    stateSpan.className = "state raised";
-                    stateText.innerText = "Raised";
-                } else if (msg.payload === "lowered") {
-                    stateSpan.className = "state lowered";
-                    stateText.innerText = "Lowered";
-                } else if (msg.payload === "raising") {
-                    stateSpan.className = "state indeterminate";
-                    stateText.innerText = "Raising...";
-                } else if (msg.payload === "lowering") {
-                    stateSpan.className = "state indeterminate";
-                    stateText.innerText = "Lowering...";
-                }
-            }
-            if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
-        });
+    function setButtonState(state) {
+      document.querySelectorAll('#send-up, #send-down').forEach(el => el.disabled = !state);
+    }
 
-	    function setListener(selector, type, listener) {
-            document.querySelector(selector).addEventListener(type, listener);
-        }
+    ws.addEventListener('message', e => {
+      let msg = JSON.parse(e.data);
+      if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
+      if (msg.type == "query_state_result") {
+        const { text, style } = message_responses[msg.payload];
+        stateSpan.className = "state " + style;
+        stateText.innerText = text;
 
-        function bindMessage(selector, msgObj) {
-            setListener(selector, "click", () => ws.send(JSON.stringify(msgObj)));
-        }
+        // disable buttons if the state is raising or lowering
+        setButtonState(!(["raising", "lowering"].includes(msg.payload)));
+      }
+    });
 
-        ws.addEventListener('open', () => {
-            document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-            bindMessage("#send-up", { type: "change_state", payload: true });
-            bindMessage("#send-down", { type: "change_state", payload: false });
-        });
+    ws.addEventListener('close', () => {
+      stateSpan.className = "state";
+      stateText.innerText = "Disconnected";
+
+      setButtonState(false);
+    });
+
+    ws.addEventListener('error', () => {
+      stateSpan.className = "state";
+      stateText.innerText = "Communication Error";
+
+      setButtonState(false);
+    });
+
+    function setListener(selector, type, listener) {
+      document.querySelector(selector).addEventListener(type, listener);
+    }
+
+    function bindMessage(selector, msgObj) {
+      setListener(selector, "click", () => ws.send(JSON.stringify(msgObj)));
+    }
+
+    ws.addEventListener('open', () => {
+      document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+      bindMessage("#send-up", { type: "change_state", payload: true });
+      bindMessage("#send-down", { type: "change_state", payload: false });
+    });
     </script>
-</body>
+  </body>
 </html>

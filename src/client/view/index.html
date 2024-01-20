@@ -1,100 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
 
     <style>
-        body {
-            color: white;
-            background: hsl(221, 33%, 13%);
-            font-family: sans-serif;
-            display: grid;
-            place-items: center;
-            height: 100dvh;
-            margin: 0;
-        }
+    body {
+      color: white;
+      background: hsl(221, 33%, 13%);
+      font-family: sans-serif;
+      display: grid;
+      place-items: center;
+      height: 100dvh;
+      margin: 0;
+    }
 
-        body > div {
-            display: grid;
-            place-items: center;
-            gap: 10px;
-        }
+    body > div {
+      display: grid;
+      place-items: center;
+      gap: 10px;
+    }
 
-        h1 {
-            margin: 0;
-        }
+    h1 {
+      margin: 0;
+    }
 
-        .state {
-            border-radius: 50px;
-            display: block;
-            width: 16px;
-            height: 16px;
-            transition-duration: .5s;
-        }
+    .state {
+      border-radius: 50px;
+      display: block;
+      width: 16px;
+      height: 16px;
+      transition-duration: .5s;
+      background: hsl(221, 33%, 30%);
+    }
 
-        .state.indeterminate {
-            background: rgb(255, 255, 82);
-        }
+    .state.indeterminate {
+      background: rgb(255, 255, 82);
+    }
 
-        .state.raised {
-            background: rgb(79, 235, 79);
-        }
+    .state.raised {
+      background: rgb(79, 235, 79);
+    }
 
-        .state.lowered {
-            background: rgb(255, 70, 70);
-        }
+    .state.lowered {
+      background: rgb(255, 70, 70);
+    }
 
-        .state-block {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 13px 15px;
-            border: 1px solid hsl(221, 33%, 30%);
-            border-radius: 15px;
-        }
+    .state-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 15px;
+      border: 1px solid hsl(221, 33%, 30%);
+      border-radius: 15px;
+    }
 
-        p {
-            margin: 0;
-        }
+    p {
+      margin: 0;
+    }
     </style>
-</head>
-<body>
+    <script>
+    const message_responses = {
+      raised: {
+        style: 'raised',
+        text: 'Raised'
+      },
+      raising: {
+        style: 'indeterminate',
+        text: 'Raising...'
+      },
+      lowered: {
+        style: 'lowered',
+        text: 'Lowered'
+      },
+      lowering: {
+        style: 'indeterminate',
+        text: 'Lowering...'
+      }
+    };
+    </script>
+  </head>
+  <body>
     <div>
-        <h1>Gate State</h1>
+      <h1>Gate State</h1>
 
-        <div class="state-block">
-            <span class="state indeterminate"></span>
-            <p>Unknown</p>
-        </div>
+      <div class="state-block">
+        <span class="state"></span>
+        <p>Connecting...</p>
+      </div>
     </div>
 
     <script>
-        let ws = new WebSocket("ws://" + location.host + location.pathname);
-        const stateSpan = document.querySelector("span.state");
-        const stateText = document.querySelector("div.state-block > p");
+    let ws = new WebSocket("ws://" + location.host + location.pathname);
+    const stateSpan = document.querySelector("span.state");
+    const stateText = document.querySelector("div.state-block > p");
 
-        ws.addEventListener('message', e => {
-            let msg = JSON.parse(e.data);
-            if (msg.type === "text") alert(`Text from Server: ${msg.payload}`);
-            if (msg.type === "query_state_result") {
-                if (msg.payload === "raised") {
-                    stateSpan.className = "state raised";
-                    stateText.innerText = "Raised";
-                } else if (msg.payload === "lowered") {
-                    stateSpan.className = "state lowered";
-                    stateText.innerText = "Lowered";
-                } else if (msg.payload === "raising") {
-                    stateSpan.className = "state indeterminate";
-                    stateText.innerText = "Raising...";
-                } else if (msg.payload === "lowering") {
-                    stateSpan.className = "state indeterminate";
-                    stateText.innerText = "Lowering...";
-                }
-            }
-            if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
-        });
+    ws.addEventListener('message', e => {
+      let msg = JSON.parse(e.data);
+      if (msg.type === "text") alert(`Text from Server: ${msg.payload}`);
+      if (msg.type === "query_state_result") {
+        const { text, style } = message_responses[msg.payload];
+        stateSpan.className = "state " + style;
+        stateText.innerText = text;
+      }
+      if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
+    });
+
+    ws.addEventListener('close', () => {
+      stateSpan.className = "state";
+      stateText.innerText = "Disconnected";
+    });
+
+    ws.addEventListener('error', () => {
+      stateSpan.className = "state";
+      stateText.innerText = "Communication Error";
+    });
     </script>
-</body>
+  </body>
 </html>
