@@ -21,7 +21,7 @@ add_executable(
     common_state.cpp
 )
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
 # boost windows-specific setting
 if (WIN32)
@@ -37,7 +37,7 @@ target_link_libraries(
 
 # password-hash generator
 add_executable(password_hasher hash_generator.cpp)
-set_property(TARGET password_hasher PROPERTY CXX_STANDARD 17)
+set_property(TARGET password_hasher PROPERTY CXX_STANDARD 20)
 target_link_libraries(password_hasher bcrypt)
 
 # install the server binary and the password hasher to bin

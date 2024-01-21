@@ -291,7 +291,7 @@ http::message_generator handle_request(
     }
 
     // if the request target is not the root page...
-    if (const auto endpoint_perms = get_endpoint_permissions(req)) {
+    if (const auto endpoint_perms = get_endpoint_permissions(req.target())) {
 		// make sure the client has sufficient permissions
 		if (
 			req.find(http::field::authorization) == req.end()

@@ -2,12 +2,12 @@
 #define AUTH_HPP
 
 #include "common.hpp"
-#include <unordered_map>
 #include <optional>
 #include <bcrypt.h>
 #include <boost/beast/core/detail/base64.hpp>
 #include <array>
-#include <unordered_map>
+#include <utility>
+#include <vector>
 #include <filesystem>
 #include <fstream>
 
@@ -20,37 +20,15 @@ enum AuthorizationType {
     Control = 2,
 };
 
-const std::unordered_map<std::string, std::optional<AuthorizationType>> endpoint_map = {
-    { "/", std::nullopt },
+const std::vector<std::pair<std::string, std::optional<AuthorizationType>>> endpoint_map = {
     { "/control", Control },
-    { "/view", View }
+    { "/view", View },
+    { "/", std::nullopt }
 };
 
-template <class Body, class Allocator>
 std::optional<AuthorizationType> get_endpoint_permissions(
-	const http::request<Body, http::basic_fields<Allocator>>& req
-) {
-    auto& target = req.target();
-    std::size_t last_delimeter = target.rfind('/');
-    std::string endpoint;
-    if (last_delimeter == 0) {
-        if (target.size() > 1) {
-            endpoint = target;
-        }
-        else {
-			endpoint = "/";
-        }
-    }
-    else {
-        endpoint = target.substr(0, last_delimeter);
-    }
-
-    if (endpoint_map.find(endpoint) == endpoint_map.end()) {
-        return Blocked;
-    }
-
-    return endpoint_map.at(endpoint);
-}
+    std::string_view path
+);
 
 struct auth_data {
     AuthorizationType permissions;

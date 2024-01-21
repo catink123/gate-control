@@ -1,5 +1,23 @@
 #include "auth.hpp"
 
+std::optional<AuthorizationType> get_endpoint_permissions(
+	std::string_view path
+) {
+    for (const auto& pair : endpoint_map) {
+        const std::string& endpoint = pair.first;
+        const auto& permissions = pair.second;
+
+        if (path.starts_with(endpoint)) {
+            if (path.size() > endpoint.size() && path[endpoint.size()] != '/') {
+                return get_endpoint_permissions(path.substr(0, path.rfind('/') + 1));
+            }
+            return permissions;
+        }
+    }
+
+    return Blocked;
+}
+
 std::optional<std::unordered_map<std::string, auth_data>> 
 open_auth_table_from_file(fs::path file_path) {
     std::ifstream file;

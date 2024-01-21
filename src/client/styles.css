@@ -1,0 +1,42 @@
+body {
+    color: white;
+    background: hsl(221, 33%, 13%);
+    font-family: sans-serif;
+    display: grid;
+    place-items: center;
+    height: 100dvh;
+    margin: 0;
+}
+
+body>div {
+    display: grid;
+    place-items: center;
+    gap: 10px;
+}
+
+h1, p {
+    margin: 0;
+}
+
+a {
+    border: 1px solid hsl(221, 33%, 30%);
+    padding: 10px 15px;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    transition-duration: .1s;
+    background: hsl(221, 33%, 15%);
+}
+
+a:hover {
+    background: hsl(221, 33%, 30%);
+}
+
+a:active {
+    background: hsl(221, 33%, 10%);
+}
+
+div.linkbar {
+    display: flex;
+    gap: 10px;
+}

@@ -5,61 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
 
-    <style>
-    body {
-      color: white;
-      background: hsl(221, 33%, 13%);
-      font-family: sans-serif;
-      display: grid;
-      place-items: center;
-      height: 100dvh;
-      margin: 0;
-    }
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="state-styles.css">
 
-    body > div {
-      display: grid;
-      place-items: center;
-      gap: 10px;
-    }
-
-    h1 {
-      margin: 0;
-    }
-
-    .state {
-      border-radius: 50px;
-      display: block;
-      width: 16px;
-      height: 16px;
-      transition-duration: .5s;
-      background: hsl(221, 33%, 30%);
-    }
-
-    .state.indeterminate {
-      background: rgb(255, 255, 82);
-    }
-
-    .state.raised {
-      background: rgb(79, 235, 79);
-    }
-
-    .state.lowered {
-      background: rgb(255, 70, 70);
-    }
-
-    .state-block {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 13px 15px;
-      border: 1px solid hsl(221, 33%, 30%);
-      border-radius: 15px;
-    }
-
-    p {
-      margin: 0;
-    }
-    </style>
     <script>
     const message_responses = {
       raised: {
