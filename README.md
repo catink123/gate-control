@@ -84,3 +84,67 @@ The server acts as a bridge between a user on the network and the USB-connected 
 The server hosts a client application, available at it's address. A user can enter the server's address in the web browser and access the remote control panel for the microcontroller.
 
 Arduino microcontroller acts as a gate control, or in other words it holds information about the physical state of the gate and allows to change that state (raise or lower the gate).
+
+## Running
+
+### Finding the correct serial port
+
+Before running the server, connect the Arduino microcontroller to the computer with the server program. Then, depending on your OS, you need to find instructions on how to find out which serial port is the Arduino's serial port. 
+
+On Windows, you can open Device Manager and find the correct serial port under "Ports (COM & LPT)" category. The correct syntax of the serial port's name is `COMx`, where `x` is the index of the COM-port.
+
+On Linux, you can run `dmesg | grep -i serial` to find messages about the connected USB Serial devices. The correct syntax of the serial port's name is `/dev/ttyUSBx`, where `x` is the index of the serial port.
+
+Write down or remember this name, as it's required to start the server.
+
+### Setting up the users
+
+In order for authentication to work, you need to create a special file called an auth-file. This file contains users' logins, permissions and hashed passwords.
+
+Create an empty text file anywhere in the filesystem and write lines in the following format:
+
+```
+login:permissions:password_hash
+```
+
+* `login` is the user's name.
+* `permissions` is one of the following numbers:
+	* `2` - Control permissions (can control the gate and view it's status),
+	* `1` - View permissions (can only view the gate's status),
+	* `0` - Blocked permissions (can't control the gate and view it's status).
+* `password_hash` is the hash in the BCrypt format. You can generate a password hash using the included `password_hasher` binary. Here's what it looks like:
+	```
+	$ ./password_hasher <password-to-hash>
+	bcrypt-hash-of-the-password
+	```
+
+For example, if you want to list a user named "john" with password "securepassword123", give him Control permissions and save the auth-file to `auth.txt`, you would first create a hash of the password:
+```sh
+$ ./password_hasher securepassword123
+$2b$10$IQM8fMDqzo3QiClv6Ztn4uIM482CxtU7mbiNEO2UJ30qzbUIdr2zS
+```
+
+Then, you would add the following line to `auth.txt`:
+```
+john:2:$2b$10$IQM8fMDqzo3QiClv6Ztn4uIM482CxtU7mbiNEO2UJ30qzbUIdr2zS
+```
+
+### Starting the server
+
+After you've completed the steps before, you can start the server a terminal window like this:
+```sh
+$ ./GateControl <com-port> <auth-file> [<ipv4-address>] [<port>]
+```
+* `<com-port>` is the previously found serial port's name.
+* `<auth-file>` is the path to the previously created auth-file.
+
+Optionally, you can pass an IPv4 address and a port number to bind to.
+
+For example, if the Arduino microcontroller's serial port name is `COM3`, the auth-file is located in the same directory as the server binary under the name `auth.txt` and you don't want to bind to a specific IP address and port, you would write this command:
+```
+$ ./GateControl COM3 auth.txt
+```
+
+After the server application responds with the message "Server started at...", you can connect to the server using any browser specifying the server's address and optionally a port (if it's value is not `80`, the default) after a colon in the address bar.
+
+To gracefully shutdown the server application, press `Ctrl + C` in the terminal window it's running in. The server may wait for open sessions to be closed. To force close the server, press `Ctrl + C` once more.
