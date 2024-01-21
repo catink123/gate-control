@@ -4,20 +4,57 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <limits>
 #include "common.hpp"
 #include "http_listener.hpp"
 #include "common_state.hpp"
 
-const auto ADDRESS = net::ip::make_address_v4("0.0.0.0");
-const auto PORT = static_cast<unsigned short>(80);
+const auto DEFAULT_ADDRESS = net::ip::make_address_v4("0.0.0.0");
+const auto DEFAULT_PORT = static_cast<unsigned short>(80);
 const auto DOC_ROOT = std::make_shared<std::string>("./client");
 const auto THREAD_COUNT = 8;
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        printf("Usage: %s <com-port> <auth-file>", argv[0]);
+        printf("Usage: %s <com-port> <auth-file> [<ipv4-address>] [<port>]", argv[0]);
         return 1;
     }
+
+	std::optional<net::ip::address_v4> address;
+	std::optional<unsigned short> port;
+
+	if (argc == 4) {
+		try {
+			address = net::ip::make_address_v4(argv[3]);
+		}
+		catch (...) {
+			std::cerr << "Invalid IPv4 Address passed in an argument." << std::endl;
+			return 1;
+		}
+	}
+
+	if (!address) {
+		address = DEFAULT_ADDRESS;
+	}
+
+	if (argc == 5) {
+		try {
+			int port_int = std::stoi(argv[4]);
+			if (port_int > std::numeric_limits<unsigned short>::max() || port_int < 0) {
+				std::cerr << "Port passed as an argument is invalid." << std::endl;
+				return 1;
+			}
+			port = static_cast<unsigned short>(port_int);
+		}
+		catch (...) {
+			std::cerr << "Port passed as an argument is invalid." << std::endl;
+			return 1;
+		}
+	}
+
+	if (!port) {
+		port = DEFAULT_PORT;
+	}
 
 	fs::path auth_file_path;
 
@@ -60,14 +97,14 @@ int main(int argc, char* argv[]) {
 
 		std::make_shared<http_listener>(
 			ioc,
-			tcp::endpoint{ADDRESS, PORT},
+			tcp::endpoint{address.value(), port.value()},
 			DOC_ROOT,
 			comstate,
 			arduino_connection,
 			auth_table_ptr
 		)->run();
 
-		std::cout << "Server started at " << ADDRESS << ":" << PORT << "." << std::endl;
+		std::cout << "Server started at " << DEFAULT_ADDRESS << ":" << DEFAULT_PORT << "." << std::endl;
 
 		// graceful shutdown
 		net::signal_set signals(ioc, SIGINT, SIGTERM);
@@ -84,11 +121,21 @@ int main(int argc, char* argv[]) {
 		for (auto i = 0; i < THREAD_COUNT - 1; ++i) {
 			v.emplace_back(
 				[&ioc] {
-					ioc.run();
+					try {
+						ioc.run();
+					}
+					catch (const std::exception& ex) {
+						std::cerr << "Stopping thread because of an unhandled exception: " << ex.what() << std::endl;
+					}
 				}
 			);
 		}
-		ioc.run();
+		try {
+			ioc.run();
+		}
+		catch (const std::exception& ex) {
+			std::cerr << "Stopping main thread because of an unhandled exception: " << ex.what() << std::endl;
+		}
 
 		// if the program is here, the graceful shutdown is in progress, wait for all threads to end
 		for (std::thread& th : v) {

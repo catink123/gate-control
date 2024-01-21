@@ -15,9 +15,9 @@ namespace base64 = beast::detail::base64;
 namespace fs = std::filesystem;
 
 enum AuthorizationType {
-    View = 0,
-    Control = 1,
-    Blocked = 2
+    Blocked = 0,
+    View = 1,
+    Control = 2,
 };
 
 const std::unordered_map<std::string, std::optional<AuthorizationType>> endpoint_map = {
@@ -69,6 +69,10 @@ std::optional<AuthorizationType> get_auth(
 	const http::request<Body, http::basic_fields<Allocator>>& req,
 	const std::unordered_map<std::string, auth_data>& auth_table
 ) {
+    if (req.find(http::field::authorization) == req.end()) {
+        return std::nullopt;
+    }
+
     // get the authorization field and separate the base64 encoded user-pass combination
     const std::string authorization = req.at(http::field::authorization);
     const std::string user_pass = authorization.substr(authorization.find(' ') + 1);

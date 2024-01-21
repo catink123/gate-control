@@ -250,7 +250,7 @@ http::message_generator handle_request(
 			};
 
 			res.set(http::field::server, VERSION);
-			res.set(http::field::www_authenticate, "Basic realm=\"control\"");
+			res.set(http::field::www_authenticate, "Basic realm=\"viewcontrol\"");
 			res.keep_alive(req.keep_alive());
 			res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
 			res.prepare_payload();
@@ -305,7 +305,7 @@ http::message_generator handle_request(
 			return unauthorized(req.target());
 		}
 
-        if (permissions != endpoint_perms) {
+        if (permissions < endpoint_perms) {
             return forbidden(req.target());
         }
     }
