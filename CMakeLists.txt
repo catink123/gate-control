@@ -32,4 +32,13 @@ CPMAddPackage(
         "BUILD_TESTS OFF"
 )
 
+CPMAddPackage(
+    NAME cryptopp
+    VERSION 8.9.0
+    GITHUB_REPOSITORY "abdes/cryptopp-cmake"
+    GIT_TAG "CRYPTOPP_8_9_0"
+    OPTIONS
+        "BUILD_TESTS OFF"
+)
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)

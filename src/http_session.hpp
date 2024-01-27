@@ -30,7 +30,8 @@ template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
     http::request<Body, http::basic_fields<Allocator>>&& req,
-    std::shared_ptr<auth_table_t> auth_table
+    std::shared_ptr<auth_table_t> auth_table,
+    std::shared_ptr<std::string> nonce
 );
 
 class http_session : public std::enable_shared_from_this<http_session> {
@@ -41,6 +42,8 @@ class http_session : public std::enable_shared_from_this<http_session> {
     std::shared_ptr<common_state> comstate;
     std::shared_ptr<arduino_messenger> arduino_connection;
     std::shared_ptr<auth_table_t> auth_table;
+
+    std::shared_ptr<std::string> nonce;
 
     // a queue to prevent overload
     static constexpr std::size_t queue_limit = 16;

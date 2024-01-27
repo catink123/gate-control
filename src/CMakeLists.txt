@@ -32,18 +32,19 @@ target_link_libraries(
     ${PROJECT_NAME}
     Boost::beast
     nlohmann_json::nlohmann_json
-    bcrypt
+    # bcrypt
+    cryptopp::cryptopp
 )
 
 # password-hash generator
-add_executable(password_hasher hash_generator.cpp)
-set_property(TARGET password_hasher PROPERTY CXX_STANDARD 20)
-target_link_libraries(password_hasher bcrypt)
+# add_executable(password_hasher hash_generator.cpp)
+# set_property(TARGET password_hasher PROPERTY CXX_STANDARD 20)
+# target_link_libraries(password_hasher bcrypt)
 
 # install the server binary and the password hasher to bin
 
 install(
-    TARGETS ${PROJECT_NAME} password_hasher
+    TARGETS ${PROJECT_NAME} # password_hasher
     RUNTIME DESTINATION bin
 )
 

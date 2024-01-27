@@ -28,9 +28,10 @@ public:
     template<class Body, class Allocator>
     void do_accept(
         http::request<Body, http::basic_fields<Allocator>> req,
-        std::shared_ptr<auth_table_t> auth_table
+        std::shared_ptr<auth_table_t> auth_table,
+        std::string_view nonce
     ) {
-        auto auth = get_auth(req, *auth_table);
+        auto auth = get_auth(req, *auth_table, nonce);
         if (auth == std::nullopt || auth == Blocked) {
             return;
         }

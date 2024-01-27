@@ -14,6 +14,7 @@ http_session::http_session(
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
     response_queue.reserve(queue_limit);
+    nonce = make_shared<std::string>(generate_nonce());
 }
 
 void http_session::run() {
@@ -68,7 +69,7 @@ void http_session::on_read(
                 arduino_connection
 			);
 
-        session->do_accept(parser->release(), auth_table);
+        session->do_accept(parser->release(), auth_table, *nonce);
         comstate->add_session(session);
         
         return;
@@ -76,7 +77,7 @@ void http_session::on_read(
 
     // send the response back
     queue_write(
-        handle_request(*doc_root, parser->release(), auth_table)
+        handle_request(*doc_root, parser->release(), auth_table, nonce)
     );
 
     // if the response queue is not at it's limit, try to add another response to the queue
@@ -192,7 +193,8 @@ template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
     http::request<Body, http::basic_fields<Allocator>>&& req,
-    std::shared_ptr<auth_table_t> auth_table
+    std::shared_ptr<auth_table_t> auth_table,
+    std::shared_ptr<std::string> nonce
 ) {
     const auto bad_request = 
         [&req] (beast::string_view why) {
@@ -243,14 +245,21 @@ http::message_generator handle_request(
         };
 
     const auto unauthorized =
-        [&req] (beast::string_view target) {
+        [=, &req] (beast::string_view target) {
+
+            // generate a new nonce for a 401 status
+			*nonce = generate_nonce();
+
 			http::response<http::string_body> res{
 				http::status::unauthorized,
 				req.version()
 			};
 
 			res.set(http::field::server, VERSION);
-			res.set(http::field::www_authenticate, "Basic realm=\"viewcontrol\"");
+			res.set(
+                http::field::www_authenticate, 
+                R"(Digest realm="viewcontrol", nonce=")" + *nonce + R"(", algorithm="MD5")"
+            );
 			res.keep_alive(req.keep_alive());
 			res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
 			res.prepare_payload();
@@ -299,7 +308,7 @@ http::message_generator handle_request(
 			return unauthorized(req.target());
 		}
 
-		const auto permissions = get_auth(req, *auth_table);
+		const auto permissions = get_auth(req, *auth_table, *nonce);
 
 		if (!permissions) {
 			return unauthorized(req.target());
