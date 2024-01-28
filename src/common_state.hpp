@@ -3,8 +3,14 @@
 
 #include <memory>
 #include <vector>
-#include "websocket_session.hpp"
+
+#include "common.hpp"
+
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/io_context.hpp>
+
+#include "websocket_session.hpp"
 #include "arduino_messenger.hpp"
 
 class common_state : public std::enable_shared_from_this<common_state> {

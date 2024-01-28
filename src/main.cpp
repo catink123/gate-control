@@ -1,13 +1,19 @@
-#include <nlohmann/json.hpp>
-#include <boost/asio/signal_set.hpp>
 #include <memory>
 #include <string>
 #include <vector>
 #include <thread>
 #include <limits>
-#include "common.hpp"
+
+#include <nlohmann/json.hpp>
+
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+
 #include "http_listener.hpp"
 #include "common_state.hpp"
+
+using tcp = net::ip::tcp;
 
 const auto DEFAULT_ADDRESS = net::ip::make_address_v4("0.0.0.0");
 const auto DEFAULT_PORT = static_cast<unsigned short>(80);

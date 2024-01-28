@@ -2,15 +2,22 @@
 #define ARDUINO_MESSENGER_HPP
 
 #include "common.hpp"
+
+#include <queue>
+#include <thread>
+
 #include <boost/asio/serial_port.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/read_until.hpp>
 #include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/post.hpp>
+
+#include <boost/beast/core/bind_handler.hpp>
+
 #include "json_message.hpp"
-#include <queue>
-#include <thread>
 
 class arduino_messenger : public std::enable_shared_from_this<arduino_messenger> {
 	static constexpr std::size_t MAX_MESSAGE_LENGTH = 100;

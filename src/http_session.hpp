@@ -1,18 +1,41 @@
 #ifndef HTTP_SESSION_HPP
 #define HTTP_SESSION_HPP
 
-#include "common.hpp"
-#include <boost/optional.hpp>
 #include <memory>
 #include <string>
 #include <chrono>
 #include <array>
+
+#include "common.hpp"
+
+#include <boost/beast/http/message.hpp>
+#include <boost/beast/http/message_generator.hpp>
+#include <boost/beast/http/read.hpp>
+#include <boost/beast/http/status.hpp>
+#include <boost/beast/http/field.hpp>
+#include <boost/beast/http/verb.hpp>
+#include <boost/beast/http/file_body.hpp>
+#include <boost/beast/websocket/impl/rfc6455.hpp>
+#include <boost/beast/core/string_type.hpp>
+#include <boost/beast/core/error.hpp>
+#include <boost/beast/core/bind_handler.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/core/buffers_generator.hpp>
+#include <boost/beast/core/string_type.hpp>
+#include <boost/beast/core/string.hpp>
+#include <boost/beast/core/file_base.hpp>
+
+#include <boost/asio/dispatch.hpp>
+
+#include <boost/optional/optional_fwd.hpp>
+
 #include "websocket_session.hpp"
 #include "arduino_messenger.hpp"
 #include "common_state.hpp"
 #include "auth.hpp"
 
-namespace base64 = beast::detail::base64;
+using tcp = net::ip::tcp;
 
 beast::string_view mime_type(
     beast::string_view path
@@ -31,7 +54,8 @@ http::message_generator handle_request(
     beast::string_view doc_root,
     http::request<Body, http::basic_fields<Allocator>>&& req,
     std::shared_ptr<auth_table_t> auth_table,
-    std::shared_ptr<std::string> nonce
+    std::string& nonce,
+    std::string& opaque
 );
 
 class http_session : public std::enable_shared_from_this<http_session> {
@@ -43,7 +67,9 @@ class http_session : public std::enable_shared_from_this<http_session> {
     std::shared_ptr<arduino_messenger> arduino_connection;
     std::shared_ptr<auth_table_t> auth_table;
 
-    std::shared_ptr<std::string> nonce;
+    // required for digest authentication
+    std::string nonce;
+    std::shared_ptr<std::string> opaque;
 
     // a queue to prevent overload
     static constexpr std::size_t queue_limit = 16;
@@ -54,10 +80,11 @@ class http_session : public std::enable_shared_from_this<http_session> {
 public:
     http_session(
         tcp::socket&& socket,
-        const std::shared_ptr<const std::string>& doc_root,
+        std::shared_ptr<const std::string> doc_root,
 		std::shared_ptr<common_state> comstate,
 		std::shared_ptr<arduino_messenger> arduino_connection,
-        std::shared_ptr<auth_table_t> auth_table
+        std::shared_ptr<auth_table_t> auth_table,
+        std::shared_ptr<std::string> opaque
     );
 
     void run();

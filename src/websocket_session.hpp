@@ -2,14 +2,28 @@
 #define WEBSOCKET_SESSION_HPP
 
 #include "common.hpp"
-#include <boost/beast/websocket.hpp>
-#include <boost/asio/placeholders.hpp>
+
 #include <memory>
 #include <queue>
 #include <thread>
+
+#include <boost/beast/websocket/stream_base.hpp>
+#include <boost/beast/websocket/stream.hpp>
+#include <boost/beast/websocket/error.hpp>
+#include <boost/beast/core/bind_handler.hpp>
+#include <boost/beast/core/error.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
+
+#include <boost/asio/post.hpp>
+#include <boost/asio/placeholders.hpp>
+#include <boost/asio/ip/tcp.hpp>
+
 #include "json_message.hpp"
 #include "arduino_messenger.hpp"
 #include "auth.hpp"
+
+using tcp = net::ip::tcp;
 
 class websocket_session : public std::enable_shared_from_this<websocket_session> {
     websocket::stream<beast::tcp_stream> ws;
@@ -29,9 +43,10 @@ public:
     void do_accept(
         http::request<Body, http::basic_fields<Allocator>> req,
         std::shared_ptr<auth_table_t> auth_table,
-        std::string_view nonce
+        const std::string& nonce,
+        const std::string& opaque
     ) {
-        auto auth = get_auth(req, *auth_table, nonce);
+        auto auth = get_auth(req, *auth_table, nonce, opaque);
         if (auth == std::nullopt || auth == Blocked) {
             return;
         }

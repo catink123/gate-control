@@ -119,10 +119,10 @@ std::string to_hex(const std::string& input, bool uppercase) {
     return output;
 }
 
-std::string md5_hash(const std::string& input) {
+std::string sha256_hash(const std::string& input) {
     std::string output;
 
-    CryptoPP::Weak::MD5 hash;
+    CryptoPP::SHA256 hash;
 
     CryptoPP::StringSource(input, true,
         new CryptoPP::HashFilter(hash,
@@ -169,9 +169,19 @@ bool digest_auth::check_password(
     std::string_view password,
     std::string_view method,
     std::string_view nonce,
+    std::string_view opaque,
     const auth_table_t& auth_table
 ) const {
-    if (auth_table.find(username) == auth_table.end()) {
+    if (
+        // there's no user with the specified name
+        auth_table.find(username) == auth_table.end() ||
+        // no qop parameter
+        !qop || 
+        // no opaque parameter
+        !this->opaque ||
+        // specified opaque isn't the same as stored opaque
+        this->opaque != opaque
+	) {
         return false;
     }
 
@@ -179,13 +189,19 @@ bool digest_auth::check_password(
 
     std::string A1 = 
         username + ':' + realm + ':' + std::string(password);
-    std::string A1_hash = md5_hash(A1);
+    std::string A1_hash = sha256_hash(A1);
 
     std::string A2 = std::string(method) + ':' + uri;
-	std::string A2_hash = md5_hash(A2);
+	std::string A2_hash = sha256_hash(A2);
 
-    std::string A1_nonce_A2 = A1_hash + ':' + std::string(nonce) + ':' + A2_hash;
-    std::string KD = md5_hash(A1_nonce_A2);
+    std::string KD_unhashed =
+        A1_hash + ':' +
+        std::string(nonce) + ':' +
+        nc.value() + ':' +
+        cnonce.value() + ':' +
+        qop.value() + ':' +
+        A2_hash;
+    std::string KD = sha256_hash(KD_unhashed);
 
     return response == KD;
 }
@@ -233,15 +249,28 @@ std::optional<digest_auth> parse_digest_auth_field(
     }
 }
 
-std::string generate_nonce() {
+std::string generate_base64_str(unsigned int size) {
     std::string output;
 
     CryptoPP::AutoSeededRandomPool rng;
-    CryptoPP::RandomNumberSource(rng, NONCE_SIZE, true,
+    CryptoPP::RandomNumberSource _(rng, size, true,
         new CryptoPP::Base64URLEncoder(
             new CryptoPP::StringSink(output)
         )
 	);
 
     return output;
+}
+
+std::string generate_digest_response(
+    const std::string& nonce, 
+    const std::string& opaque
+) {
+    return
+        R"(Digest )"
+        R"(realm="viewcontrol", )"
+        R"(nonce=")" + nonce + R"(", )"
+        R"(algorithm=SHA-256, )"
+        R"(qop="auth", )"
+        R"(opaque=")" + opaque + '"';
 }

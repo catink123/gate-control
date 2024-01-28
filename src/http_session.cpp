@@ -2,19 +2,22 @@
 
 http_session::http_session(
     tcp::socket&& socket,
-    const std::shared_ptr<const std::string>& doc_root,
+    std::shared_ptr<const std::string> doc_root,
     std::shared_ptr<common_state> comstate,
     std::shared_ptr<arduino_messenger> arduino_connection,
-    std::shared_ptr<auth_table_t> auth_table
+    std::shared_ptr<auth_table_t> auth_table,
+    std::shared_ptr<std::string> opaque
 ) : stream(std::move(socket)),
     doc_root(doc_root),
     comstate(comstate),
     arduino_connection(arduino_connection),
-    auth_table(auth_table)
+    auth_table(auth_table),
+    opaque(opaque)
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
     response_queue.reserve(queue_limit);
-    nonce = make_shared<std::string>(generate_nonce());
+
+    nonce = generate_base64_str(NONCE_SIZE);
 }
 
 void http_session::run() {
@@ -69,7 +72,7 @@ void http_session::on_read(
                 arduino_connection
 			);
 
-        session->do_accept(parser->release(), auth_table, *nonce);
+        session->do_accept(parser->release(), auth_table, nonce, *opaque);
         comstate->add_session(session);
         
         return;
@@ -77,7 +80,7 @@ void http_session::on_read(
 
     // send the response back
     queue_write(
-        handle_request(*doc_root, parser->release(), auth_table, nonce)
+        handle_request(*doc_root, parser->release(), auth_table, nonce, *opaque)
     );
 
     // if the response queue is not at it's limit, try to add another response to the queue
@@ -194,7 +197,8 @@ http::message_generator handle_request(
     beast::string_view doc_root,
     http::request<Body, http::basic_fields<Allocator>>&& req,
     std::shared_ptr<auth_table_t> auth_table,
-    std::shared_ptr<std::string> nonce
+    std::string& nonce,
+    std::string& opaque
 ) {
     const auto bad_request = 
         [&req] (beast::string_view why) {
@@ -245,10 +249,10 @@ http::message_generator handle_request(
         };
 
     const auto unauthorized =
-        [=, &req] (beast::string_view target) {
+        [&nonce, &opaque, &req] (beast::string_view target, bool stale = false) {
 
             // generate a new nonce for a 401 status
-			*nonce = generate_nonce();
+			nonce = generate_base64_str(NONCE_SIZE);
 
 			http::response<http::string_body> res{
 				http::status::unauthorized,
@@ -256,9 +260,9 @@ http::message_generator handle_request(
 			};
 
 			res.set(http::field::server, VERSION);
-			res.set(
-                http::field::www_authenticate, 
-                R"(Digest realm="viewcontrol", nonce=")" + *nonce + R"(", algorithm="MD5")"
+            res.set(
+                http::field::www_authenticate,
+                generate_digest_response(nonce, opaque)
             );
 			res.keep_alive(req.keep_alive());
 			res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
@@ -308,7 +312,7 @@ http::message_generator handle_request(
 			return unauthorized(req.target());
 		}
 
-		const auto permissions = get_auth(req, *auth_table, *nonce);
+		const auto permissions = get_auth(req, *auth_table, nonce, opaque);
 
 		if (!permissions) {
 			return unauthorized(req.target());

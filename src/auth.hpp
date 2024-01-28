@@ -2,18 +2,22 @@
 #define AUTH_HPP
 
 #include "common.hpp"
+
 #include <optional>
 #include <array>
 #include <utility>
 #include <vector>
 #include <filesystem>
 #include <fstream>
-#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
-#include <cryptopp/md5.h>
+#include <regex>
+
+#include <boost/beast/http/verb.hpp>
+#include <boost/beast/http/message.hpp>
+
+#include <cryptopp/sha.h>
 #include <cryptopp/base64.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/hex.h>
-#include <regex>
 
 namespace fs = std::filesystem;
 
@@ -51,10 +55,11 @@ std::optional<std::unordered_map<std::string, auth_data>>
 open_auth_table_from_file(fs::path file_path);
 
 const std::size_t NONCE_SIZE = 32;
-std::string generate_nonce();
+const std::size_t OPAQUE_SIZE = 32;
+std::string generate_base64_str(unsigned int size);
 
 std::string to_hex(const std::string& input, bool uppercase = false);
-std::string md5_hash(const std::string& input);
+std::string sha256_hash(const std::string& input);
 
 struct digest_auth {
     std::string username;
@@ -72,9 +77,10 @@ struct digest_auth {
 
     // MD5 hashing and no qop is assumed
     bool check_password(
-        std::string_view password, 
+        std::string_view password,
         std::string_view method,
-		std::string_view nonce,
+        std::string_view nonce,
+        std::string_view opaque,
         const auth_table_t& auth_table
     ) const;
 };
@@ -89,7 +95,8 @@ template <class Body, class Allocator>
 std::optional<AuthorizationType> get_auth(
 	const http::request<Body, http::basic_fields<Allocator>>& req,
 	const std::unordered_map<std::string, auth_data>& auth_table,
-    std::string_view nonce
+    const std::string& nonce,
+    const std::string& opaque
 ) {
     if (req.find(http::field::authorization) == req.end()) {
         return std::nullopt;
@@ -110,51 +117,17 @@ std::optional<AuthorizationType> get_auth(
     const auth_data& stored_auth_data = auth_table.at(digest.username);
     const std::string method = http_method_to_str(req.base().method());
 
-    if (digest.check_password(stored_auth_data.password, method, nonce, auth_table)) {
+    if (digest.check_password(stored_auth_data.password, method, nonce, opaque, auth_table)) {
         return stored_auth_data.permissions;
     }
     else {
         return std::nullopt;
     }
-
-    //// get the authorization field and separate the base64 encoded user-pass combination
-    //const std::string authorization = req.at(http::field::authorization);
-    //const std::string user_pass = authorization.substr(authorization.find(' ') + 1);
-
-    //// decode the base64 combination
-    //const std::size_t decoded_size = base64::decoded_size(user_pass.size());
-    ////char* user_pass_decoded = new char[decoded_size];
-    //std::vector<char> user_pass_decoded(decoded_size, '\0');
-
-    //auto decode_result = 
-    //    beast::detail::base64::decode(
-    //        reinterpret_cast<void*>(&user_pass_decoded[0]),
-    //        user_pass.c_str(), 
-    //        user_pass.size()
-    //    );
-
-    //const std::string user_pass_str(user_pass_decoded, decode_result.first);
-
-    ////delete[] user_pass_decoded;
-
-    //// separate the user-id and password (if the user exists in the auth_table)
-    //const std::size_t user_pass_delimeter_loc = user_pass_str.find(':');
-    //const std::string user_id = user_pass_str.substr(0, user_pass_delimeter_loc);
-
-    //if (auth_table.find(user_id) == auth_table.end()) {
-    //    return std::nullopt;
-    //}
-
-    //const std::string password = user_pass_str.substr(user_pass_delimeter_loc + 1);
-   
-    //// compare the sent password with the stored hash to validate
-    //const auth_data& data = auth_table.at(user_id);
-    //if (bcrypt::validatePassword(password, data.password)) {
-    //    return data.permissions;
-    //}
-    //else {
-    //    return std::nullopt;
-    //}
 }
+
+std::string generate_digest_response(
+    const std::string& nonce,
+    const std::string& opaque
+);
 
 #endif

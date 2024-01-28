@@ -3,7 +3,7 @@
 http_listener::http_listener(
     net::io_context& ioc,
     tcp::endpoint endpoint,
-    const std::shared_ptr<const std::string>& doc_root,
+    std::shared_ptr<const std::string> doc_root,
 	std::shared_ptr<common_state> comstate,
     std::shared_ptr<arduino_messenger> arduino_connection,
     std::shared_ptr<auth_table_t> auth_table
@@ -41,6 +41,8 @@ http_listener::http_listener(
         std::cerr << "Couldn't start listening: " << ec.message() << std::endl;
         return;
     }
+
+    opaque = make_shared<std::string>(generate_base64_str(OPAQUE_SIZE));
 }
 
 void http_listener::run() {
@@ -68,7 +70,8 @@ void http_listener::on_accept(beast::error_code ec, tcp::socket socket) {
         doc_root,
         comstate,
         arduino_connection,
-        auth_table
+        auth_table,
+        opaque
     )->run();
 
     do_accept();
