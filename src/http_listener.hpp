@@ -5,7 +5,7 @@
 
 #include <memory>
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 #include <boost/asio/strand.hpp>
 
@@ -30,7 +30,7 @@ class http_listener : public std::enable_shared_from_this<http_listener> {
     std::shared_ptr<auth_table_t> auth_table;
 
     std::shared_ptr<std::string> opaque;
-    std::vector<std::string> used_nonces;
+    std::unordered_map<net::ip::address, std::shared_ptr<std::string>> associated_nonces;
     
 public:
     http_listener(

@@ -78,10 +78,8 @@ class http_session : public std::enable_shared_from_this<http_session> {
     std::shared_ptr<auth_table_t> auth_table;
 
     // required for digest authentication
-    std::string nonce;
+    std::shared_ptr<std::string> nonce;
     std::shared_ptr<std::string> opaque;
-    bool is_websocket_upgrade_checked = false;
-    std::vector<std::string> used_nonces_copy;
 
     // a queue to prevent overload
     static constexpr std::size_t queue_limit = 16;
@@ -97,10 +95,8 @@ public:
 		std::shared_ptr<arduino_messenger> arduino_connection,
         std::shared_ptr<auth_table_t> auth_table,
         std::shared_ptr<std::string> opaque,
-        std::vector<std::string> used_nonces
+        std::shared_ptr<std::string> nonce
     );
-
-    const std::string& get_nonce() const;
 
     void run();
 

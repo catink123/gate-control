@@ -7,24 +7,17 @@ http_session::http_session(
     std::shared_ptr<arduino_messenger> arduino_connection,
     std::shared_ptr<auth_table_t> auth_table,
     std::shared_ptr<std::string> opaque,
-    std::vector<std::string> used_nonces
+    std::shared_ptr<std::string> nonce
 ) : stream(std::move(socket)),
     doc_root(doc_root),
     comstate(comstate),
     arduino_connection(arduino_connection),
     auth_table(auth_table),
     opaque(opaque),
-    used_nonces_copy(used_nonces)
+    nonce(nonce)
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
     response_queue.reserve(queue_limit);
-
-    nonce = generate_base64_str(NONCE_SIZE);
-    std::cout << "new client with nonce '" << nonce << "'" << std::endl;
-}
-
-const std::string& http_session::get_nonce() const {
-    return nonce;
 }
 
 void http_session::run() {
@@ -79,16 +72,16 @@ void http_session::on_read(
         const auto digest_opt = parse_digest_auth_field(auth_field);
         if (!digest_opt) {
             queue_write(
-                unauthorized_response(nonce, *opaque, req, req.target(), false)
+                unauthorized_response(*nonce, *opaque, req, req.target(), false)
             );
 
             return;
         }
 
         const std::string& request_nonce = digest_opt.value().nonce;
-        if (request_nonce != nonce) {
+        if (request_nonce != *nonce) {
             queue_write(
-                unauthorized_response(nonce, *opaque, req, req.target(), true)
+                unauthorized_response(*nonce, *opaque, req, req.target(), true)
             );
 
             return;
@@ -101,7 +94,7 @@ void http_session::on_read(
                 arduino_connection
 			);
 
-        session->do_accept(req, auth_table, nonce, *opaque);
+        session->do_accept(req, auth_table, *nonce, *opaque);
         comstate->add_session(session);
         
         return;
@@ -109,7 +102,7 @@ void http_session::on_read(
 
     // send the response back
     queue_write(
-        handle_request(*doc_root, parser->release(), auth_table, nonce, *opaque)
+        handle_request(*doc_root, parser->release(), auth_table, *nonce, *opaque)
     );
 
     // if the response queue is not at it's limit, try to add another response to the queue
