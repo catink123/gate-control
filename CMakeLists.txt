@@ -24,15 +24,6 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
-    NAME bcrypt
-    VERSION 2.0
-    GITHUB_REPOSITORY "hilch/Bcrypt.cpp"
-    GIT_TAG "V2.0_NODEBCRYPT"
-    OPTIONS
-        "BUILD_TESTS OFF"
-)
-
-CPMAddPackage(
     NAME cryptopp
     VERSION 8.9.0
     GITHUB_REPOSITORY "abdes/cryptopp-cmake"

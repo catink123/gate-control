@@ -20,8 +20,6 @@
 using tcp = net::ip::tcp;
 
 class http_listener : public std::enable_shared_from_this<http_listener> {
-    static constexpr std::size_t MAX_USED_NONCES = 20;
-
     net::io_context& ioc;
     tcp::acceptor acceptor;
     std::shared_ptr<const std::string> doc_root;

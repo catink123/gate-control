@@ -104,7 +104,7 @@ In order for authentication to work, you need to create a special file called an
 Create an empty text file anywhere in the filesystem and write lines in the following format:
 
 ```
-login:permissions:password_hash
+login:permissions:password
 ```
 
 * `login` is the user's name.
@@ -112,21 +112,11 @@ login:permissions:password_hash
 	* `2` - Control permissions (can control the gate and view it's status),
 	* `1` - View permissions (can only view the gate's status),
 	* `0` - Blocked permissions (can't control the gate and view it's status).
-* `password_hash` is the hash in the BCrypt format. You can generate a password hash using the included `password_hasher` binary. Here's what it looks like:
-	```
-	$ ./password_hasher <password-to-hash>
-	bcrypt-hash-of-the-password
-	```
+* `password` is the user's password. 
 
-For example, if you want to list a user named "john" with password "securepassword123", give him Control permissions and save the auth-file to `auth.txt`, you would first create a hash of the password:
-```sh
-$ ./password_hasher securepassword123
-$2b$10$IQM8fMDqzo3QiClv6Ztn4uIM482CxtU7mbiNEO2UJ30qzbUIdr2zS
+For example, if you want to list a user named "john" with password "securepassword123", give him Control permissions and save the auth-file to `auth.txt`, you would add the following line to the file `auth.txt`:
 ```
-
-Then, you would add the following line to `auth.txt`:
-```
-john:2:$2b$10$IQM8fMDqzo3QiClv6Ztn4uIM482CxtU7mbiNEO2UJ30qzbUIdr2zS
+john:2:securepassword123
 ```
 
 ### Starting the server
