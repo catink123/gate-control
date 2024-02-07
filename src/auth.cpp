@@ -264,13 +264,20 @@ std::string generate_base64_str(unsigned int size) {
 
 std::string generate_digest_response(
     const std::string& nonce, 
-    const std::string& opaque
+    const std::string& opaque,
+    bool stale
 ) {
-    return
+    std::string result = 
         R"(Digest )"
         R"(realm="viewcontrol", )"
         R"(nonce=")" + nonce + R"(", )"
         R"(algorithm=SHA-256, )"
         R"(qop="auth", )"
         R"(opaque=")" + opaque + '"';
+
+    if (stale) {
+        result += ", stale=TRUE";
+    }
+
+    return result;
 }

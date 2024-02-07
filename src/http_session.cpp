@@ -6,18 +6,25 @@ http_session::http_session(
     std::shared_ptr<common_state> comstate,
     std::shared_ptr<arduino_messenger> arduino_connection,
     std::shared_ptr<auth_table_t> auth_table,
-    std::shared_ptr<std::string> opaque
+    std::shared_ptr<std::string> opaque,
+    std::vector<std::string> used_nonces
 ) : stream(std::move(socket)),
     doc_root(doc_root),
     comstate(comstate),
     arduino_connection(arduino_connection),
     auth_table(auth_table),
-    opaque(opaque)
+    opaque(opaque),
+    used_nonces_copy(used_nonces)
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
     response_queue.reserve(queue_limit);
 
     nonce = generate_base64_str(NONCE_SIZE);
+    std::cout << "new client with nonce '" << nonce << "'" << std::endl;
+}
+
+const std::string& http_session::get_nonce() const {
+    return nonce;
 }
 
 void http_session::run() {
@@ -65,6 +72,28 @@ void http_session::on_read(
 
     // if the request is a WebSocket Upgrade
     if (websocket::is_upgrade(parser->get())) {
+        // make sure the authentication is valid (it is most definitely not)
+
+        auto req = parser->release();
+        const std::string auth_field = req.at(http::field::authorization);
+        const auto digest_opt = parse_digest_auth_field(auth_field);
+        if (!digest_opt) {
+            queue_write(
+                unauthorized_response(nonce, *opaque, req, req.target(), false)
+            );
+
+            return;
+        }
+
+        const std::string& request_nonce = digest_opt.value().nonce;
+        if (request_nonce != nonce) {
+            queue_write(
+                unauthorized_response(nonce, *opaque, req, req.target(), true)
+            );
+
+            return;
+        }
+
         // create a new websocket session, moving the socket and request into it
         auto session = 
             std::make_shared<websocket_session>(
@@ -72,7 +101,7 @@ void http_session::on_read(
                 arduino_connection
 			);
 
-        session->do_accept(parser->release(), auth_table, nonce, *opaque);
+        session->do_accept(req, auth_table, nonce, *opaque);
         comstate->add_session(session);
         
         return;
@@ -193,6 +222,34 @@ beast::string_view mime_type(
 }
 
 template <class Body, class Allocator>
+http::response<http::string_body> unauthorized_response(
+    std::string& nonce,
+    const std::string& opaque,
+    http::request<Body, http::basic_fields<Allocator>>& req,
+    beast::string_view target,
+    bool stale
+) {
+	// generate a new nonce for a 401 status
+	nonce = generate_base64_str(NONCE_SIZE);
+
+	http::response<http::string_body> res{
+		http::status::unauthorized,
+		req.version()
+	};
+
+	res.set(http::field::server, VERSION);
+	res.set(
+		http::field::www_authenticate,
+		generate_digest_response(nonce, opaque, stale)
+	);
+	res.keep_alive(req.keep_alive());
+	res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
+	res.prepare_payload();
+
+	return res;
+}
+
+template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
     http::request<Body, http::basic_fields<Allocator>>&& req,
@@ -248,28 +305,28 @@ http::message_generator handle_request(
             return res;
         };
 
-    const auto unauthorized =
-        [&nonce, &opaque, &req] (beast::string_view target, bool stale = false) {
+   // const auto unauthorized =
+   //     [&nonce, &opaque, &req] (beast::string_view target, bool stale = false) {
 
-            // generate a new nonce for a 401 status
-			nonce = generate_base64_str(NONCE_SIZE);
+   //         // generate a new nonce for a 401 status
+			//nonce = generate_base64_str(NONCE_SIZE);
 
-			http::response<http::string_body> res{
-				http::status::unauthorized,
-				req.version()
-			};
+			//http::response<http::string_body> res{
+			//	http::status::unauthorized,
+			//	req.version()
+			//};
 
-			res.set(http::field::server, VERSION);
-            res.set(
-                http::field::www_authenticate,
-                generate_digest_response(nonce, opaque)
-            );
-			res.keep_alive(req.keep_alive());
-			res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
-			res.prepare_payload();
+			//res.set(http::field::server, VERSION);
+   //         res.set(
+   //             http::field::www_authenticate,
+   //             generate_digest_response(nonce, opaque)
+   //         );
+			//res.keep_alive(req.keep_alive());
+			//res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
+			//res.prepare_payload();
 
-			return res;
-        };
+			//return res;
+   //     };
 
     const auto forbidden =
         [&req](beast::string_view target) {
@@ -309,13 +366,15 @@ http::message_generator handle_request(
 		if (
 			req.find(http::field::authorization) == req.end()
 		) {
-			return unauthorized(req.target());
+            return unauthorized_response(nonce, opaque, req, req.target());
+			//return unauthorized(req.target());
 		}
 
 		const auto permissions = get_auth(req, *auth_table, nonce, opaque);
 
 		if (!permissions) {
-			return unauthorized(req.target());
+            return unauthorized_response(nonce, opaque, req, req.target());
+			//return unauthorized(req.target());
 		}
 
         if (permissions < endpoint_perms) {

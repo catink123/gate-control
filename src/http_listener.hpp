@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <boost/asio/strand.hpp>
 
@@ -19,6 +20,8 @@
 using tcp = net::ip::tcp;
 
 class http_listener : public std::enable_shared_from_this<http_listener> {
+    static constexpr std::size_t MAX_USED_NONCES = 20;
+
     net::io_context& ioc;
     tcp::acceptor acceptor;
     std::shared_ptr<const std::string> doc_root;
@@ -27,6 +30,7 @@ class http_listener : public std::enable_shared_from_this<http_listener> {
     std::shared_ptr<auth_table_t> auth_table;
 
     std::shared_ptr<std::string> opaque;
+    std::vector<std::string> used_nonces;
     
 public:
     http_listener(

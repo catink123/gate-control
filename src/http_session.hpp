@@ -5,6 +5,7 @@
 #include <string>
 #include <chrono>
 #include <array>
+#include <vector>
 
 #include "common.hpp"
 
@@ -48,6 +49,15 @@ std::string path_cat(
 
 const std::array<std::string, 3> indexable_endpoints = { "/", "/view", "/control" };
 
+template <class Body, class Allocator>
+http::response<http::string_body> unauthorized_response(
+    std::string& nonce,
+    const std::string& opaque,
+    http::request<Body, http::basic_fields<Allocator>>& req,
+    beast::string_view target,
+    bool stale = false
+);
+
 // handle given request by returning an appropriate response
 template <class Body, class Allocator>
 http::message_generator handle_request(
@@ -70,6 +80,8 @@ class http_session : public std::enable_shared_from_this<http_session> {
     // required for digest authentication
     std::string nonce;
     std::shared_ptr<std::string> opaque;
+    bool is_websocket_upgrade_checked = false;
+    std::vector<std::string> used_nonces_copy;
 
     // a queue to prevent overload
     static constexpr std::size_t queue_limit = 16;
@@ -84,8 +96,11 @@ public:
 		std::shared_ptr<common_state> comstate,
 		std::shared_ptr<arduino_messenger> arduino_connection,
         std::shared_ptr<auth_table_t> auth_table,
-        std::shared_ptr<std::string> opaque
+        std::shared_ptr<std::string> opaque,
+        std::vector<std::string> used_nonces
     );
+
+    const std::string& get_nonce() const;
 
     void run();
 

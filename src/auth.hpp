@@ -127,7 +127,8 @@ std::optional<AuthorizationType> get_auth(
 
 std::string generate_digest_response(
     const std::string& nonce,
-    const std::string& opaque
+    const std::string& opaque,
+    bool stale = false
 );
 
 #endif

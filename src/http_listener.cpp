@@ -43,6 +43,7 @@ http_listener::http_listener(
     }
 
     opaque = make_shared<std::string>(generate_base64_str(OPAQUE_SIZE));
+    used_nonces.reserve(MAX_USED_NONCES);
 }
 
 void http_listener::run() {
@@ -65,14 +66,19 @@ void http_listener::on_accept(beast::error_code ec, tcp::socket socket) {
         return;
     }
 
-    std::make_shared<http_session>(
+    auto session = std::make_shared<http_session>(
         std::move(socket),
         doc_root,
         comstate,
         arduino_connection,
         auth_table,
-        opaque
-    )->run();
+        opaque,
+        used_nonces
+    );
+
+    used_nonces.push_back(session->get_nonce());
+
+    session->run();
 
     do_accept();
 }
