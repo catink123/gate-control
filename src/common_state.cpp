@@ -9,7 +9,7 @@ void common_state::add_session(
 	std::shared_ptr<websocket_session> session
 ) {
 	sessions.push_back(session);
-	messenger->send_message(json_message(json_message::QueryState));
+	messenger->send_message(json_message(json_message::QueryState, { 0, 1, 2, 3, 4, 5, 6 }));
 }
 
 void common_state::run() {

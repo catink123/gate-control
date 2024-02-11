@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/state-styles.css">
+    <script src="/config.js"></script>
 
     <style>
     button {
@@ -64,13 +65,60 @@
         text: 'Lowering...'
       }
     };
+
+    let config = null;
+
+    function createControls(gateID) {
+      let result = {
+        id: gateID,
+        stateElement: null
+      };
+
+      let header = document.createElement('p');
+      header.innerText = `Gate #${gateID}`;
+
+      let controlBar = document.createElement('div');
+      controlBar.className = 'controlbar';
+      controlBar.id = 'controlbar-' + gateID;
+      
+      let raiseButton = document.createElement('button');
+      raiseButton.innerText = 'Raise';
+      raiseButton.id = 'raise';
+
+      let lowerButton = document.createElement('button');
+      lowerButton.innerText = 'Lower';
+      lowerButton.id = 'lower';
+
+      controlBar.appendChild(raiseButton);
+      controlBar.appendChild(lowerButton);
+
+      let stateElementContainer = document.createElement('div');
+      stateElementContainer.className = 'state-container';
+      stateElementContainer.innerHTML = '<p>Gate state: </p>';
+
+      let stateElement = document.createElement('div');
+      stateElement.className = 'state-block';
+      stateElement.id = 'state-block-' + gateID;
+      stateElement.innerHTML = '<span class="state"></span><p>Connecting...</p>';
+
+      stateElementContainer.appendChild(stateElement);
+
+      result.stateElement = stateElement;
+
+      let container = document.querySelector("body > div");
+      container.appendChild(header);
+      container.appendChild(controlBar);
+      container.appendChild(stateElementContainer);
+
+      return result;
+    }
     </script>
   </head>
   <body>
     <div>
       <h1>Control Page</h1>
 
-      <div class="controlbar">
+      <!-- <div class="controlbar">
         <button disabled id="send-up">Raise</button>
         <button disabled id="send-down">Lower</button>
       </div>
@@ -81,13 +129,22 @@
           <span class="state"></span>
           <p>Connecting...</p>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
     const stateSpan = document.querySelector("span.state");
     const stateText = document.querySelector("div.state-block > p");
+
+    getConfig().then(c => {
+      console.log(c);
+      config = c;
+
+      for (const gate of config.gates) {
+        createControls(gate.id);
+      }
+    });
 
     function setButtonState(state) {
       document.querySelectorAll('#send-up, #send-down').forEach(el => el.disabled = !state);
@@ -97,12 +154,20 @@
       let msg = JSON.parse(e.data);
       if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
       if (msg.type == "query_state_result") {
-        const { text, style } = message_responses[msg.payload];
-        stateSpan.className = "state " + style;
-        stateText.innerText = text;
+        const gateStates = msg.payload;
+        console.log(gateStates);
+        for (const state of gateStates) {
+          const { text, style } = message_responses[msg.payload];
+
+          document.querySelector(`#state-block-${state.id} > span.state`).className = "state " + style;
+          document.querySelector(`#state-block-${state.id} > p`).innerText = text;
+        }
+        // const { text, style } = message_responses[msg.payload];
+        // stateSpan.className = "state " + style;
+        // stateText.innerText = text;
 
         // disable buttons if the state is raising or lowering
-        setButtonState(!(["raising", "lowering"].includes(msg.payload)));
+        // setButtonState(!(["raising", "lowering"].includes(msg.payload)));
       }
     });
 
@@ -129,9 +194,15 @@
     }
 
     ws.addEventListener('open', () => {
-      document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-      bindMessage("#send-up", { type: "change_state", payload: true });
-      bindMessage("#send-down", { type: "change_state", payload: false });
+      // document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+      // bindMessage("#send-up", { type: "change_state", payload: true });
+      // bindMessage("#send-down", { type: "change_state", payload: false });
+
+      while (!config);
+      for (const gate of config.gates) {
+        bindMessage(`#controlbar-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
+        bindMessage(`#controlbar-${gate.id} > #lower`, { type: "change_state", payload: { id: gate.id, state: false }});
+      }
     });
     </script>
   </body>
