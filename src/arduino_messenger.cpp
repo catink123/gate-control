@@ -56,7 +56,12 @@ void arduino_messenger::on_read(
 		std::cout << "COM-port closed." << std::endl;
 	}
 
-	if (ec || bytes_transferred == 0) {
+	if (ec) {
+		return;
+	}
+
+	if (bytes_transferred == 0) {
+		do_read();
 		return;
 	}
 

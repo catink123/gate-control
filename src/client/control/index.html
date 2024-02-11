@@ -92,23 +92,17 @@
       controlBar.appendChild(raiseButton);
       controlBar.appendChild(lowerButton);
 
-      let stateElementContainer = document.createElement('div');
-      stateElementContainer.className = 'state-container';
-      stateElementContainer.innerHTML = '<p>Gate state: </p>';
-
       let stateElement = document.createElement('div');
       stateElement.className = 'state-block';
       stateElement.id = 'state-block-' + gateID;
       stateElement.innerHTML = '<span class="state"></span><p>Connecting...</p>';
-
-      stateElementContainer.appendChild(stateElement);
 
       result.stateElement = stateElement;
 
       let container = document.querySelector("body > div");
       container.appendChild(header);
       container.appendChild(controlBar);
-      container.appendChild(stateElementContainer);
+      container.appendChild(stateElement);
 
       return result;
     }
@@ -138,7 +132,6 @@
     const stateText = document.querySelector("div.state-block > p");
 
     getConfig().then(c => {
-      console.log(c);
       config = c;
 
       for (const gate of config.gates) {
@@ -147,7 +140,10 @@
     });
 
     function setButtonState(state) {
-      document.querySelectorAll('#send-up, #send-down').forEach(el => el.disabled = !state);
+      while (!config);
+      for (const gate of config.gates) {
+        document.querySelectorAll(`#raise, #lower`).forEach(el => el.disabled = !state);
+      }
     }
 
     ws.addEventListener('message', e => {
@@ -155,32 +151,37 @@
       if (msg.type == "text") alert(`Text from Server: ${msg.payload}`);
       if (msg.type == "query_state_result") {
         const gateStates = msg.payload;
-        console.log(gateStates);
         for (const state of gateStates) {
-          const { text, style } = message_responses[msg.payload];
+          let stateBlock = document.querySelector(`#state-block-${state.id}`);
 
-          document.querySelector(`#state-block-${state.id} > span.state`).className = "state " + style;
-          document.querySelector(`#state-block-${state.id} > p`).innerText = text;
+          if (!stateBlock) {
+            continue;
+          }
+
+          const { text, style } = message_responses[state.state];
+
+          stateBlock.querySelector("span.state").className = "state " + style;
+          stateBlock.querySelector("p").innerText = text;
         }
-        // const { text, style } = message_responses[msg.payload];
-        // stateSpan.className = "state " + style;
-        // stateText.innerText = text;
-
-        // disable buttons if the state is raising or lowering
-        // setButtonState(!(["raising", "lowering"].includes(msg.payload)));
       }
     });
 
     ws.addEventListener('close', () => {
-      stateSpan.className = "state";
-      stateText.innerText = "Disconnected";
+      while (!config);
+      for (const gate of config.gates) {
+        document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
+        document.querySelector(`#state-block-${gate.id} > p`).innerText = "Disconnected";
+      }
 
       setButtonState(false);
     });
 
     ws.addEventListener('error', () => {
-      stateSpan.className = "state";
-      stateText.innerText = "Communication Error";
+      while (!config);
+      for (const gate of config.gates) {
+        document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
+        document.querySelector(`#state-block-${gate.id} > p`).innerText = "Communication Error";
+      }
 
       setButtonState(false);
     });
@@ -194,10 +195,6 @@
     }
 
     ws.addEventListener('open', () => {
-      // document.querySelectorAll('button').forEach(btn => btn.disabled = false);
-      // bindMessage("#send-up", { type: "change_state", payload: true });
-      // bindMessage("#send-down", { type: "change_state", payload: false });
-
       while (!config);
       for (const gate of config.gates) {
         bindMessage(`#controlbar-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
@@ -207,3 +204,5 @@
     </script>
   </body>
 </html>
+
+

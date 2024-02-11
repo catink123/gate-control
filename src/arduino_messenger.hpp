@@ -20,7 +20,7 @@
 #include "json_message.hpp"
 
 class arduino_messenger : public std::enable_shared_from_this<arduino_messenger> {
-	static constexpr std::size_t MAX_MESSAGE_LENGTH = 100;
+	static constexpr std::size_t MAX_MESSAGE_LENGTH = 10240;
 
 	net::serial_port com;
 	net::streambuf buffer;

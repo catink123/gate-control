@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="state-styles.css">
+    <script src="/config.js"></script>
 
     <script>
     const message_responses = {
@@ -27,42 +28,80 @@
         text: 'Lowering...'
       }
     };
+
+    let config = null;
+
+    function createControls(gateID) {
+      let header = document.createElement('p');
+      header.innerText = `Gate #${gateID}`;
+
+      let stateElement = document.createElement('div');
+      stateElement.className = 'state-block';
+      stateElement.id = 'state-block-' + gateID;
+      stateElement.innerHTML = '<span class="state"></span><p>Connecting...</p>';
+
+      let container = document.querySelector("body > div");
+      container.appendChild(header);
+      container.appendChild(stateElement);
+    }
     </script>
   </head>
   <body>
     <div>
       <h1>Gate State</h1>
 
-      <div class="state-block">
+      <!-- <div class="state-block">
         <span class="state"></span>
         <p>Connecting...</p>
-      </div>
+      </div> -->
     </div>
 
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
-    const stateSpan = document.querySelector("span.state");
-    const stateText = document.querySelector("div.state-block > p");
+
+    getConfig().then(c => {
+      config = c;
+
+      for (const gate of config.gates) {
+        createControls(gate.id);
+      }
+    });
 
     ws.addEventListener('message', e => {
       let msg = JSON.parse(e.data);
       if (msg.type === "text") alert(`Text from Server: ${msg.payload}`);
       if (msg.type === "query_state_result") {
-        const { text, style } = message_responses[msg.payload];
-        stateSpan.className = "state " + style;
-        stateText.innerText = text;
+        const gateStates = msg.payload;
+        for (const state of gateStates) {
+          const stateBlock = document.querySelector(`#state-block-${state.id}`);
+
+          if (!stateBlock) {
+            continue;
+          }
+
+          const { text, style } = message_responses[state.state];
+
+          stateBlock.querySelector("span.state").className = "state " + style;
+          stateBlock.querySelector("p").innerText = text;
+        }
       }
       if (msg.type == "availability") alert(`Availability: ${msg.payload}`);
     });
 
     ws.addEventListener('close', () => {
-      stateSpan.className = "state";
-      stateText.innerText = "Disconnected";
+      while (!config);
+      for (const gate of config.gates) {
+        document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
+        document.querySelector(`#state-block-${gate.id} > p`).innerText = "Disconnected";
+      }
     });
 
     ws.addEventListener('error', () => {
-      stateSpan.className = "state";
-      stateText.innerText = "Communication Error";
+      while (!config);
+      for (const gate of config.gates) {
+        document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
+        document.querySelector(`#state-block-${gate.id} > p`).innerText = "Communication Error";
+      }
     });
     </script>
   </body>
