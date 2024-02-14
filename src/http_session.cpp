@@ -130,6 +130,8 @@ bool http_session::do_write() {
 
         bool keep_alive = msg.keep_alive();
 
+		write_mutex.lock();
+
         beast::async_write(
             stream,
             std::move(msg),
@@ -445,6 +447,7 @@ void http_session::on_write(
     beast::error_code ec,
     std::size_t bytes_transferred
 ) {
+    write_mutex.unlock();
     boost::ignore_unused(bytes_transferred);
 
     if (ec) {

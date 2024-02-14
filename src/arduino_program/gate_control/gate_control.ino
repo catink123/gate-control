@@ -242,7 +242,7 @@ void update_gates() {
     if (gate.tick()) {
       // update physical LED state
       unsigned int pin = GATE_PINS[i];
-      unsigned char value = static_cast<unsigned char>(floorf(gate.state * 255));
+      unsigned char value = static_cast<unsigned char>(floorf(powf(gate.state, 2) * 255));
       analogWrite(pin, value);
     }
 

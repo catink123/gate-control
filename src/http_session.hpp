@@ -87,6 +87,8 @@ class http_session : public std::enable_shared_from_this<http_session> {
 
     boost::optional<http::request_parser<http::string_body>> parser;
 
+    std::mutex write_mutex;
+
 public:
     http_session(
         tcp::socket&& socket,

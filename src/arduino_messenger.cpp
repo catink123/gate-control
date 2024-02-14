@@ -75,7 +75,11 @@ void arduino_messenger::on_read(
 	buffer.consume(bytes_transferred);
 
 	std::lock_guard lock(imq_mutex);
-	incoming_message_queue.push(json_message::parse_message(message));
+	try {
+		json_message jmsg = json_message::parse_message(message);
+		incoming_message_queue.push(jmsg);
+	}
+	catch (...) {}
 
 	do_read();
 }
