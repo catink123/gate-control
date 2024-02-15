@@ -5,9 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gate Control</title>
 
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="state-styles.css">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/state-styles.css">
     <script src="/config.js"></script>
+    <script src="/map.js"></script>
+
+    <style>
+      .gate-controller {
+        grid-template: 
+          "h" auto
+          "s" auto / auto;
+      }
+
+      .gate-header {
+        border-bottom: 1px solid hsl(221, 33%, 30%);
+      }
+    </style>
 
     <script>
     const message_responses = {
@@ -33,6 +46,7 @@
 
     function createControls(gateID) {
       let header = document.createElement('p');
+      header.className = 'gate-header';
       header.innerText = `Gate #${gateID}`;
 
       let stateElement = document.createElement('div');
@@ -40,31 +54,40 @@
       stateElement.id = 'state-block-' + gateID;
       stateElement.innerHTML = '<span class="state"></span><p>Connecting...</p>';
 
-      let container = document.querySelector("body > div");
+      let container = document.createElement('div');
+      container.className = 'gate-controller';
+      container.id = 'controller-' + gateID;
       container.appendChild(header);
       container.appendChild(stateElement);
+
+      return container;
     }
     </script>
   </head>
   <body>
     <div>
       <h1>Gate State</h1>
-
-      <!-- <div class="state-block">
-        <span class="state"></span>
-        <p>Connecting...</p>
-      </div> -->
     </div>
 
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
+    let controllers = [];
 
     getConfig().then(c => {
       config = c;
 
       for (const gate of config.gates) {
-        createControls(gate.id);
+        controllers.push(createControls(gate.id));
       }
+
+      new ImageMap(
+        {
+          mapImage: config.image,
+          gates: config.gates
+        },
+        controllers,
+        document.querySelector('body > div')
+      );
     });
 
     ws.addEventListener('message', e => {

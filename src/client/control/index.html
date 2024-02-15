@@ -8,43 +8,7 @@
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/state-styles.css">
     <script src="/config.js"></script>
-
-    <style>
-    button {
-      border: 1px solid hsl(221, 33%, 30%);
-      padding: 10px 15px;
-      color: white;
-      text-decoration: none;
-      border-radius: 50px;
-      transition-duration: .1s;
-      background:hsl(221, 33%, 15%);
-    }
-
-    button:hover {
-      background:hsl(221, 33%, 30%);
-    }
-
-    button:active {
-      background:hsl(221, 33%, 10%);
-    }
-
-    button:disabled {
-      opacity: 0.35;
-      pointer-events: none;
-    }
-
-    div.controlbar {
-      display: flex;
-      gap: 10px;
-    }
-
-    .state-container {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      padding-top: 10px;
-    }
-    </style>
+    <script src="/map.js"></script>
 
     <script>
     const message_responses = {
@@ -69,74 +33,59 @@
     let config = null;
 
     function createControls(gateID) {
-      let result = {
-        id: gateID,
-        stateElement: null
-      };
-
       let header = document.createElement('p');
+      header.className = 'gate-header';
       header.innerText = `Gate #${gateID}`;
-
-      let controlBar = document.createElement('div');
-      controlBar.className = 'controlbar';
-      controlBar.id = 'controlbar-' + gateID;
       
       let raiseButton = document.createElement('button');
-      raiseButton.innerText = 'Raise';
+      raiseButton.innerText = '⤊';
       raiseButton.id = 'raise';
 
       let lowerButton = document.createElement('button');
-      lowerButton.innerText = 'Lower';
+      lowerButton.innerText = '⤋';
       lowerButton.id = 'lower';
-
-      controlBar.appendChild(raiseButton);
-      controlBar.appendChild(lowerButton);
 
       let stateElement = document.createElement('div');
       stateElement.className = 'state-block';
       stateElement.id = 'state-block-' + gateID;
       stateElement.innerHTML = '<span class="state"></span><p>Connecting...</p>';
 
-      result.stateElement = stateElement;
-
-      let container = document.querySelector("body > div");
+      let container = document.createElement('div');
+      container.className = 'gate-controller';
+      container.id = 'controller-' + gateID;
       container.appendChild(header);
-      container.appendChild(controlBar);
+      container.appendChild(raiseButton);
+      container.appendChild(lowerButton);
       container.appendChild(stateElement);
 
-      return result;
+      return container;
     }
     </script>
   </head>
   <body>
     <div>
       <h1>Control Page</h1>
-
-      <!-- <div class="controlbar">
-        <button disabled id="send-up">Raise</button>
-        <button disabled id="send-down">Lower</button>
-      </div>
-
-      <div class="state-container">
-        <p>Gate state: </p>
-        <div class="state-block">
-          <span class="state"></span>
-          <p>Connecting...</p>
-        </div>
-      </div> -->
     </div>
 
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
-    const stateSpan = document.querySelector("span.state");
-    const stateText = document.querySelector("div.state-block > p");
+    const controllers = [];
 
     getConfig().then(c => {
       config = c;
 
       for (const gate of config.gates) {
-        createControls(gate.id);
+        controllers.push(createControls(gate.id));
       }
+
+      new ImageMap(
+        {
+          mapImage: config.image,
+          gates: config.gates
+        },
+        controllers,
+        document.querySelector('body > div')
+      );
     });
 
     function setButtonState(state) {
@@ -197,8 +146,8 @@
     ws.addEventListener('open', () => {
       while (!config);
       for (const gate of config.gates) {
-        bindMessage(`#controlbar-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
-        bindMessage(`#controlbar-${gate.id} > #lower`, { type: "change_state", payload: { id: gate.id, state: false }});
+        bindMessage(`#controller-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
+        bindMessage(`#controller-${gate.id} > #lower`, { type: "change_state", payload: { id: gate.id, state: false }});
       }
     });
     </script>
