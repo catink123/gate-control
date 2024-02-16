@@ -30,7 +30,7 @@ open_auth_table_from_file(fs::path file_path) {
     std::string current_line;
 
     // parsing line by line with the following format:
-    // login:permissions:password_hash
+    // login:permissions:password
     while (std::getline(file, current_line)) {
         std::size_t first_delimeter = current_line.find(':');
         if (first_delimeter == std::string::npos) {
@@ -59,13 +59,13 @@ open_auth_table_from_file(fs::path file_path) {
             continue;
         }
 
-        std::string password_hash = current_line.substr(second_delimeter + 1);
+        std::string password = current_line.substr(second_delimeter + 1);
 
         auth_table.insert({
             login,
             auth_data(
                 static_cast<AuthorizationType>(permissions),
-                password_hash
+                password
             ) 
 		});
     }

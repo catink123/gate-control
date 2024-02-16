@@ -19,6 +19,7 @@ add_executable(
     auth.cpp
     common_state.hpp
     common_state.cpp
+    config.hpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)

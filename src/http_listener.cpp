@@ -6,13 +6,15 @@ http_listener::http_listener(
     std::shared_ptr<const std::string> doc_root,
 	std::shared_ptr<common_state> comstate,
     std::shared_ptr<arduino_messenger> arduino_connection,
-    std::shared_ptr<auth_table_t> auth_table
+    std::shared_ptr<auth_table_t> auth_table,
+    std::shared_ptr<gc_config> config
 ) : ioc(ioc),
     acceptor(net::make_strand(ioc)),
     doc_root(doc_root),
     comstate(comstate),
     arduino_connection(arduino_connection),
-    auth_table(auth_table)
+    auth_table(auth_table),
+    config(config)
 {
     beast::error_code ec;
 
@@ -83,7 +85,8 @@ void http_listener::on_accept(beast::error_code ec, tcp::socket socket) {
         arduino_connection,
         auth_table,
         opaque,
-        associated_nonces.at(remote_address)
+        associated_nonces.at(remote_address),
+        config
     )->run();
 
     do_accept();

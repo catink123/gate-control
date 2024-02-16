@@ -42,7 +42,7 @@ const imageMapStyles = {
 };
 
 /** A map of HTML elements confined to an image's dimensions */
-class ImageMap {
+class ImageMap extends EventTarget {
     /**
      * Construct an ImageMap
      * @param {ImageMapConfig} config The configuration object for the map
@@ -50,6 +50,7 @@ class ImageMap {
      * @param {HTMLElement} container Element that will contain the new map
      */
     constructor(config, bindingElements, container) {
+        super();
         /**
          * Stored configuration
          * @type {ImageMapConfig}
@@ -101,6 +102,8 @@ class ImageMap {
 
         window.addEventListener('resize', () => this.#updatePositions());
         this.#updatePositions();
+
+        this.dispatchEvent(new Event('ready'));
     }
 
     #updatePositions() {

@@ -7,14 +7,16 @@ http_session::http_session(
     std::shared_ptr<arduino_messenger> arduino_connection,
     std::shared_ptr<auth_table_t> auth_table,
     std::shared_ptr<std::string> opaque,
-    std::shared_ptr<std::string> nonce
+    std::shared_ptr<std::string> nonce,
+    std::shared_ptr<gc_config> config
 ) : stream(std::move(socket)),
     doc_root(doc_root),
     comstate(comstate),
     arduino_connection(arduino_connection),
     auth_table(auth_table),
     opaque(opaque),
-    nonce(nonce)
+    nonce(nonce),
+    config(config)
 {
     static_assert(queue_limit > 0, "queue limit must be non-zero and positive");
     response_queue.reserve(queue_limit);
@@ -102,7 +104,7 @@ void http_session::on_read(
 
     // send the response back
     queue_write(
-        handle_request(*doc_root, parser->release(), auth_table, *nonce, *opaque)
+        handle_request(*doc_root, parser->release(), auth_table, *nonce, *opaque, config)
     );
 
     // if the response queue is not at it's limit, try to add another response to the queue
@@ -130,7 +132,8 @@ bool http_session::do_write() {
 
         bool keep_alive = msg.keep_alive();
 
-		write_mutex.lock();
+        // prevent multiple simultaneous async writes
+        write_semaphore.acquire();
 
         beast::async_write(
             stream,
@@ -244,13 +247,20 @@ http::response<http::string_body> unauthorized_response(
 	return res;
 }
 
+bool is_target_single_level(std::string_view target, std::string endpoint_name) {
+    return
+        target.starts_with("/" + endpoint_name) &&
+        (target.ends_with(endpoint_name + "/") || target.ends_with(endpoint_name));
+}
+
 template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
     http::request<Body, http::basic_fields<Allocator>>&& req,
     std::shared_ptr<auth_table_t> auth_table,
     std::string& nonce,
-    std::string& opaque
+    std::string& opaque,
+    std::shared_ptr<gc_config> config
 ) {
     const auto bad_request = 
         [&req] (beast::string_view why) {
@@ -300,29 +310,6 @@ http::message_generator handle_request(
             return res;
         };
 
-   // const auto unauthorized =
-   //     [&nonce, &opaque, &req] (beast::string_view target, bool stale = false) {
-
-   //         // generate a new nonce for a 401 status
-			//nonce = generate_base64_str(NONCE_SIZE);
-
-			//http::response<http::string_body> res{
-			//	http::status::unauthorized,
-			//	req.version()
-			//};
-
-			//res.set(http::field::server, VERSION);
-   //         res.set(
-   //             http::field::www_authenticate,
-   //             generate_digest_response(nonce, opaque)
-   //         );
-			//res.keep_alive(req.keep_alive());
-			//res.body() = "Unauthorized client on resource '" + std::string(target) + "'.";
-			//res.prepare_payload();
-
-			//return res;
-   //     };
-
     const auto forbidden =
         [&req](beast::string_view target) {
 			http::response<http::string_body> res{
@@ -362,7 +349,6 @@ http::message_generator handle_request(
 			req.find(http::field::authorization) == req.end()
 		) {
             return unauthorized_response(nonce, opaque, req, req.target());
-			//return unauthorized(req.target());
 		}
 
 		const auto permissions = get_auth(req, *auth_table, nonce, opaque);
@@ -377,22 +363,62 @@ http::message_generator handle_request(
         }
     }
 
-    // build requested file path
-    std::string path = path_cat(doc_root, req.target());
+    std::string path;
 
-    if (
-        req.target().back() == '/'
-	) {
-        path.append("index.html");
+    if (is_target_single_level(req.target(), "config")) {
+        std::string gate_config = config->get_gate_config_str();
+        if (req.method() == http::verb::head) {
+			http::response<http::empty_body> res{
+				http::status::ok,
+				req.version()
+			};
+
+			res.set(http::field::server, VERSION);
+			res.set(http::field::content_type, "application/json");
+			res.content_length(gate_config.size());
+			res.keep_alive(req.keep_alive());
+
+			return res;
+        }
+        else if (req.method() == http::verb::get) {
+            http::response<http::string_body> res{
+                http::status::ok,
+                req.version()
+            };
+
+			res.set(http::field::server, VERSION);
+			res.set(http::field::content_type, "application/json");
+			res.content_length(gate_config.size());
+			res.keep_alive(req.keep_alive());
+            res.body() = gate_config;
+
+            return res;
+        }
+        else {
+            return bad_request("Invalid method on /config");
+        }
     }
-    else if (
-        std::find(
-            indexable_endpoints.begin(),
-            indexable_endpoints.end(),
-            req.target()
-        ) != indexable_endpoints.end()
-	) {
-        path.append("/index.html");
+    if (is_target_single_level(req.target(), "map")) {
+        path = config->map_image_path;
+    }
+    else {
+		// build requested file path
+		path = path_cat(doc_root, req.target());
+
+		if (
+			req.target().back() == '/'
+		) {
+			path.append("index.html");
+		}
+		else if (
+			std::find(
+				indexable_endpoints.begin(),
+				indexable_endpoints.end(),
+				req.target()
+			) != indexable_endpoints.end()
+		) {
+			path.append("/index.html");
+		}
     }
 
     // open the file
@@ -447,7 +473,7 @@ void http_session::on_write(
     beast::error_code ec,
     std::size_t bytes_transferred
 ) {
-    write_mutex.unlock();
+    write_semaphore.release();
     boost::ignore_unused(bytes_transferred);
 
     if (ec) {

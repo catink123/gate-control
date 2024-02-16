@@ -16,6 +16,7 @@
 
 #include "http_session.hpp"
 #include "common_state.hpp"
+#include "config.hpp"
 
 using tcp = net::ip::tcp;
 
@@ -29,6 +30,8 @@ class http_listener : public std::enable_shared_from_this<http_listener> {
 
     std::shared_ptr<std::string> opaque;
     std::unordered_map<net::ip::address, std::shared_ptr<std::string>> associated_nonces;
+
+    std::shared_ptr<gc_config> config;
     
 public:
     http_listener(
@@ -37,7 +40,8 @@ public:
         std::shared_ptr<const std::string> doc_root,
         std::shared_ptr<common_state> comstate,
         std::shared_ptr<arduino_messenger> arduino_connection,
-        std::shared_ptr<auth_table_t> auth_table
+        std::shared_ptr<auth_table_t> auth_table,
+        std::shared_ptr<gc_config> config
     );
 
     void run();

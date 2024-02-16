@@ -6,6 +6,7 @@
 #include <chrono>
 #include <array>
 #include <vector>
+#include <semaphore>
 
 #include "common.hpp"
 
@@ -35,6 +36,7 @@
 #include "arduino_messenger.hpp"
 #include "common_state.hpp"
 #include "auth.hpp"
+#include "config.hpp"
 
 using tcp = net::ip::tcp;
 
@@ -58,6 +60,8 @@ http::response<http::string_body> unauthorized_response(
     bool stale = false
 );
 
+bool is_target_single_level(std::string_view target, std::string endpoint_name);
+
 // handle given request by returning an appropriate response
 template <class Body, class Allocator>
 http::message_generator handle_request(
@@ -65,7 +69,8 @@ http::message_generator handle_request(
     http::request<Body, http::basic_fields<Allocator>>&& req,
     std::shared_ptr<auth_table_t> auth_table,
     std::string& nonce,
-    std::string& opaque
+    std::string& opaque,
+    std::shared_ptr<gc_config> config
 );
 
 class http_session : public std::enable_shared_from_this<http_session> {
@@ -87,7 +92,9 @@ class http_session : public std::enable_shared_from_this<http_session> {
 
     boost::optional<http::request_parser<http::string_body>> parser;
 
-    std::mutex write_mutex;
+    std::binary_semaphore write_semaphore{ 1 };
+
+    std::shared_ptr<gc_config> config;
 
 public:
     http_session(
@@ -97,7 +104,8 @@ public:
 		std::shared_ptr<arduino_messenger> arduino_connection,
         std::shared_ptr<auth_table_t> auth_table,
         std::shared_ptr<std::string> opaque,
-        std::shared_ptr<std::string> nonce
+        std::shared_ptr<std::string> nonce,
+        std::shared_ptr<gc_config> config
     );
 
     void run();

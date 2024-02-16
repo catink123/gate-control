@@ -12,6 +12,7 @@
 
 #include "http_listener.hpp"
 #include "common_state.hpp"
+#include "config.hpp"
 
 using tcp = net::ip::tcp;
 
@@ -21,17 +22,17 @@ const auto DOC_ROOT = std::make_shared<std::string>("./client");
 const auto THREAD_COUNT = 8;
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        printf("Usage: %s <com-port> <auth-file> [<ipv4-address>] [<port>]", argv[0]);
+    if (argc < 4) {
+        printf("Usage: %s <com-port> <auth-file> <config-file> [<ipv4-address>] [<port>]", argv[0]);
         return 1;
     }
 
 	std::optional<net::ip::address_v4> address;
 	std::optional<unsigned short> port;
 
-	if (argc == 4) {
+	if (argc == 5) {
 		try {
-			address = net::ip::make_address_v4(argv[3]);
+			address = net::ip::make_address_v4(argv[4]);
 		}
 		catch (...) {
 			std::cerr << "Invalid IPv4 Address passed in an argument." << std::endl;
@@ -43,9 +44,9 @@ int main(int argc, char* argv[]) {
 		address = DEFAULT_ADDRESS;
 	}
 
-	if (argc == 5) {
+	if (argc == 6) {
 		try {
-			int port_int = std::stoi(argv[4]);
+			int port_int = std::stoi(argv[5]);
 			if (port_int > std::numeric_limits<unsigned short>::max() || port_int < 0) {
 				std::cerr << "Port passed as an argument is invalid." << std::endl;
 				return 1;
@@ -81,6 +82,22 @@ int main(int argc, char* argv[]) {
 	std::shared_ptr<auth_table_t> auth_table_ptr = 
 		std::make_shared<auth_table_t>(std::move(auth_table.value()));
 
+	std::optional<gc_config> config_opt = std::nullopt;
+	try {
+		config_opt = gc_config::open_from_file(argv[3]);
+		if (!config_opt) {
+			std::cerr << "Couldn't open the supplied config file." << std::endl;
+			return 1;
+		}
+	}
+	catch (...) {
+		std::cerr << "Config file is invalid." << std::endl;
+		return 1;
+	}
+
+	std::shared_ptr<gc_config> config_ptr = 
+		std::make_shared<gc_config>(std::move(config_opt.value()));
+
     net::io_context ioc{THREAD_COUNT};
 
     try {
@@ -107,7 +124,8 @@ int main(int argc, char* argv[]) {
 			DOC_ROOT,
 			comstate,
 			arduino_connection,
-			auth_table_ptr
+			auth_table_ptr,
+			config_ptr
 		)->run();
 
 		std::cout << "Server started at " << DEFAULT_ADDRESS << ":" << DEFAULT_PORT << "." << std::endl;

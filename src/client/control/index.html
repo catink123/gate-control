@@ -69,28 +69,41 @@
 
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
-    const controllers = [];
+    let controllers = [];
+    let ready = false;
+    let imageMap = null;
 
     getConfig().then(c => {
       config = c;
 
-      for (const gate of config.gates) {
+      for (const gate of config) {
         controllers.push(createControls(gate.id));
       }
 
-      new ImageMap(
+      imageMap = new ImageMap(
         {
-          mapImage: config.image,
-          gates: config.gates
+          mapImage: '/map',
+          gates: config
         },
         controllers,
         document.querySelector('body > div')
       );
+
+      imageMap.addEventListener('ready', configureButtons);
+
+      ready = true;
     });
 
+    function configureButtons() {
+      for (const gate of config) {
+        bindMessage(`#controller-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
+        bindMessage(`#controller-${gate.id} > #lower`, { type: "change_state", payload: { id: gate.id, state: false }});
+      }
+    }
+
     function setButtonState(state) {
-      while (!config);
-      for (const gate of config.gates) {
+      while (!ready);
+      for (const gate of config) {
         document.querySelectorAll(`#raise, #lower`).forEach(el => el.disabled = !state);
       }
     }
@@ -116,8 +129,8 @@
     });
 
     ws.addEventListener('close', () => {
-      while (!config);
-      for (const gate of config.gates) {
+      while (!ready);
+      for (const gate of config) {
         document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
         document.querySelector(`#state-block-${gate.id} > p`).innerText = "Disconnected";
       }
@@ -126,8 +139,8 @@
     });
 
     ws.addEventListener('error', () => {
-      while (!config);
-      for (const gate of config.gates) {
+      while (!ready);
+      for (const gate of config) {
         document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
         document.querySelector(`#state-block-${gate.id} > p`).innerText = "Communication Error";
       }
@@ -143,13 +156,9 @@
       setListener(selector, "click", () => ws.send(JSON.stringify(msgObj)));
     }
 
-    ws.addEventListener('open', () => {
-      while (!config);
-      for (const gate of config.gates) {
-        bindMessage(`#controller-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
-        bindMessage(`#controller-${gate.id} > #lower`, { type: "change_state", payload: { id: gate.id, state: false }});
-      }
-    });
+    // ws.addEventListener('open', async () => {
+    //   while (!ready || !imageMap.ready);
+    // });
     </script>
   </body>
 </html>

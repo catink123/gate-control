@@ -16,6 +16,7 @@
 class common_state : public std::enable_shared_from_this<common_state> {
 	net::any_io_executor io;
 	std::vector<std::weak_ptr<websocket_session>> sessions;
+	std::mutex sessions_mutex;
 	std::shared_ptr<arduino_messenger> messenger;
 
 public:

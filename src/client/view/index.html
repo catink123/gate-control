@@ -72,22 +72,26 @@
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
     let controllers = [];
+    let ready = false;
+    let imageMap = null;
 
     getConfig().then(c => {
       config = c;
 
-      for (const gate of config.gates) {
+      for (const gate of config) {
         controllers.push(createControls(gate.id));
       }
 
-      new ImageMap(
+      imageMap = new ImageMap(
         {
-          mapImage: config.image,
-          gates: config.gates
+          mapImage: '/map',
+          gates: config
         },
         controllers,
         document.querySelector('body > div')
       );
+
+      ready = true;
     });
 
     ws.addEventListener('message', e => {
@@ -112,16 +116,16 @@
     });
 
     ws.addEventListener('close', () => {
-      while (!config);
-      for (const gate of config.gates) {
+      while (!ready);
+      for (const gate of config) {
         document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
         document.querySelector(`#state-block-${gate.id} > p`).innerText = "Disconnected";
       }
     });
 
     ws.addEventListener('error', () => {
-      while (!config);
-      for (const gate of config.gates) {
+      while (!ready);
+      for (const gate of config) {
         document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
         document.querySelector(`#state-block-${gate.id} > p`).innerText = "Communication Error";
       }

@@ -119,20 +119,45 @@ For example, if you want to list a user named "john" with password "securepasswo
 john:2:securepassword123
 ```
 
+### Configuring the gates
+
+To configure the gates you need a map image and a JSON config file.
+Config file is of the following format:
+```json
+{
+  "mapImage": "example.png",
+  "gates": [
+    {
+      "id": 3,
+      "x": 220,
+      "y": 100
+    },
+    {
+      "id": 0,
+      "x": 320,
+      "y": 100
+    }
+  ]
+}
+```
+
+The `mapImage` key is the path to the image of the map, and the `gates` key is an array of gates, each of which contains a gate ID, which is relative to the PWM pin ID on the Arduino microcontroller, and XY coordinates of the gate relative to the map's left-top corner. These coordinates scale to the visual representation of the map on the client page.
+
 ### Starting the server
 
 After you've completed the steps before, you can start the server a terminal window like this:
 ```sh
-$ ./GateControl <com-port> <auth-file> [<ipv4-address>] [<port>]
+$ ./GateControl <com-port> <auth-file> <config-file> [<ipv4-address>] [<port>]
 ```
 * `<com-port>` is the previously found serial port's name.
 * `<auth-file>` is the path to the previously created auth-file.
+* `<config-file>` is the path to the config file.
 
 Optionally, you can pass an IPv4 address and a port number to bind to.
 
-For example, if the Arduino microcontroller's serial port name is `COM3`, the auth-file is located in the same directory as the server binary under the name `auth.txt` and you don't want to bind to a specific IP address and port, you would write this command:
+For example, if the Arduino microcontroller's serial port name is `COM3`, the auth-file and the config file are located in the same directory as the server binary under the names `auth.txt` and `config.json` and you don't want to bind to a specific IP address and port, you would write this command:
 ```
-$ ./GateControl COM3 auth.txt
+$ ./GateControl COM3 auth.txt config.json
 ```
 
 After the server application responds with the message "Server started at...", you can connect to the server using any browser specifying the server's address and optionally a port (if it's value is not `80`, the default) after a colon in the address bar.

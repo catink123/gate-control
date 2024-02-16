@@ -8,7 +8,11 @@ common_state::common_state(
 void common_state::add_session(
 	std::shared_ptr<websocket_session> session
 ) {
-	sessions.push_back(session);
+	{
+		std::lock_guard lock(sessions_mutex);
+		sessions.push_back(session);
+	}
+
 	messenger->send_message(json_message(json_message::QueryState, { 0, 1, 2, 3, 4, 5, 6 }));
 }
 
@@ -19,14 +23,18 @@ void common_state::run() {
 void common_state::update() {
 	if (sessions.size() > 0) {
 		// remove all dead sessions
-		sessions.erase(
-			std::remove_if(
-				sessions.begin(),
-				sessions.end(),
-				[](std::weak_ptr<websocket_session>& s) { return s.expired(); }
-			),
-			sessions.end()
-		);
+		{
+			std::lock_guard lock(sessions_mutex);
+
+			sessions.erase(
+				std::remove_if(
+					sessions.begin(),
+					sessions.end(),
+					[](std::weak_ptr<websocket_session>& s) { return s.expired(); }
+				),
+				sessions.end()
+			);
+		}
 
 		// update all sessions with new state
 		if (!messenger->incoming_message_queue.empty()) {
