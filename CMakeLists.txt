@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(
     GateControl
-    VERSION 1.0.0
+    VERSION 1.1.0
     LANGUAGES CXX
 )
 
@@ -21,6 +21,7 @@ CPMAddPackage(
     OPTIONS
         "BOOST_INCLUDE_LIBRARIES beast"
         "BOOST_ENABLE_CMAKE ON"
+        "BUILD_TESTS OFF"
 )
 
 CPMAddPackage(
@@ -30,6 +31,7 @@ CPMAddPackage(
     GIT_TAG "CRYPTOPP_8_9_0"
     OPTIONS
         "BUILD_TESTS OFF"
+        "CRYPTOPP_BUILD_TESTING OFF"
 )
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
