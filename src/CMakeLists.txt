@@ -22,6 +22,14 @@ add_executable(
     config.hpp
 )
 
+# configurator is compatible with only windows because of conio.h
+if (WIN32)
+	add_executable(
+		configurator
+		configurator.cpp
+	)
+endif()
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
 # boost windows-specific setting
@@ -36,12 +44,19 @@ target_link_libraries(
     cryptopp::cryptopp
 )
 
-# install the server binary and the password hasher to bin
+# install the server binary and the configurator to bin
 
 install(
     TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
+
+if (WIN32)
+	install(
+		TARGETS configurator
+		RUNTIME DESTINATION bin
+	)
+endif()
 
 # install the client webapp to bin/client
 
