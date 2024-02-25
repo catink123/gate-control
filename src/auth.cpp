@@ -8,14 +8,19 @@ std::optional<AuthorizationType> get_endpoint_permissions(
         const auto& permissions = pair.second;
 
         if (path.starts_with(endpoint)) {
-            if (path.size() > endpoint.size() && path[endpoint.size()] != '/') {
-                return get_endpoint_permissions(path.substr(0, path.rfind('/') + 1));
+            if (path.size() > endpoint.size()) {
+                if (path.find("/", endpoint.size()) != std::string_view::npos) {
+					return get_endpoint_permissions(path.substr(0, path.rfind('/')));
+                }
+                else {
+                    return std::nullopt;
+                }
             }
             return permissions;
         }
     }
 
-    return Blocked;
+    return std::nullopt;
 }
 
 std::optional<std::unordered_map<std::string, auth_data>> 

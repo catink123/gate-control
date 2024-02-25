@@ -6,12 +6,149 @@
     <title>Gate Control</title>
 
     <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="/state-styles.css">
     <script src="/config.js"></script>
-    <script src="/map.js"></script>
+
+    <template id="gate-controller">
+      <style>
+      p {
+        margin: 0;
+      }
+
+      .gate-controller {
+        background: hsl(221, 33%, 15%);
+        border: 1px solid hsl(221, 33%, 30%);
+        border-radius: 5px;
+        overflow: hidden;
+        display: grid;
+        grid-template: 
+        "h h" auto
+        "r l" auto
+        "s s" auto / 1fr 1fr;
+      }
+
+      button {
+        border: none;
+        border-bottom: 1px solid hsl(221, 33%, 30%);
+        border-top: 1px solid hsl(221, 33%, 30%);
+        padding: 5px;
+        color: white;
+        text-decoration: none;
+        transition-duration: .1s;
+        background:hsl(221, 33%, 15%);
+        font-size: 16px;
+      }
+
+      button#raise {
+        border-right: 1px solid hsl(221, 33%, 30%);
+      }
+
+      button:hover {
+        background:hsl(221, 33%, 30%);
+      }
+
+      button:active {
+        background:hsl(221, 33%, 10%);
+      }
+
+      button:disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      button#raise {
+        grid-area: r;
+      }
+
+      button#lower {
+        grid-area: l;
+      }
+
+      .state-block {
+        grid-area: s;
+      }
+
+      .gate-header {
+        grid-area: h;
+        text-align: center;
+        padding: 5px;
+      }
+
+      .state {
+          border-radius: 50px;
+          display: block;
+          width: 16px;
+          height: 16px;
+          transition-duration: .5s;
+          background: hsl(221, 33%, 30%);
+      }
+
+      .state.indeterminate {
+          background: rgb(255, 255, 82);
+      }
+
+      .state.raised {
+          background: rgb(79, 235, 79);
+      }
+
+      .state.lowered {
+          background: rgb(255, 70, 70);
+      }
+
+      .state-block {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px;
+      }
+      </style>
+
+      <div class="gate-controller">
+        <p class="gate-header">Gate #N</p>
+        <button id="raise">⤊</button>
+        <button id="lower">⤋</button>
+
+        <div class="state-block">
+          <span class="state"></span>
+          <p>Connecting...</p>
+        </div>
+      </div>
+    </template>
+
+    <template id="image-map">
+      <style>
+      div.mapContainer {
+        display: flex;
+        position: relative;
+        max-width: 1000px;
+        width: fit-content;
+        height: fit-content;
+
+        border: 1px solid hsl(221, 33%, 30%);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+      }
+
+      ::slotted(*) {
+        position: absolute;
+        transform: translate(-50%, -50%);
+      }
+      </style>
+
+      <div class="mapContainer">
+        <img id="map" src="" alt="gate map">
+        <slot></slot>
+      </div>
+    </template>
 
     <script>
-    const message_responses = {
+    const stateProps = {
       raised: {
         style: 'raised',
         text: 'Raised'
@@ -27,86 +164,214 @@
       lowering: {
         style: 'indeterminate',
         text: 'Lowering...'
-      }
+      },
+      connecting: {
+        style: '',
+        text: 'Connecting...'
+      },
+      error: {
+        style: '',
+        text: 'Communication Error'
+      },
+      disconnected: {
+        style: '',
+        text: 'Disconnected'
+      },
     };
 
     let config = null;
 
-    function createControls(gateID) {
-      let header = document.createElement('p');
-      header.className = 'gate-header';
-      header.innerText = `Gate #${gateID}`;
-      
-      let raiseButton = document.createElement('button');
-      raiseButton.innerText = '⤊';
-      raiseButton.id = 'raise';
+    customElements.define('gate-controller', class extends HTMLElement {
+      static observedAttributes = ['state', 'gate-id'];
 
-      let lowerButton = document.createElement('button');
-      lowerButton.innerText = '⤋';
-      lowerButton.id = 'lower';
+      constructor() {
+        super();
+        const template = document.querySelector('template#gate-controller').content;
+        const shadowRoot = this.attachShadow({ mode: 'open' });
+        shadowRoot.appendChild(template.cloneNode(true));
+      }
 
-      let stateElement = document.createElement('div');
-      stateElement.className = 'state-block';
-      stateElement.id = 'state-block-' + gateID;
-      stateElement.innerHTML = '<span class="state"></span><p>Connecting...</p>';
+      connectedCallback() {
+        this.shadowRoot
+          .querySelector('button#raise')
+          .addEventListener('click', () => {
+            const detail = {
+              id: Number(this.getAttribute('gate-id')),
+              state: true
+            };
 
-      let container = document.createElement('div');
-      container.className = 'gate-controller';
-      container.id = 'controller-' + gateID;
-      container.appendChild(header);
-      container.appendChild(raiseButton);
-      container.appendChild(lowerButton);
-      container.appendChild(stateElement);
+            const customEvent = new CustomEvent('change-gate-state', { detail });
 
-      return container;
-    }
+            window.dispatchEvent(customEvent);
+          });
+
+        this.shadowRoot
+          .querySelector('button#lower')
+          .addEventListener('click', () => {
+            const detail = {
+              id: Number(this.getAttribute('gate-id')),
+              state: false
+            };
+
+            const customEvent = new CustomEvent('change-gate-state', { detail });
+
+            window.dispatchEvent(customEvent);
+          });
+      }
+
+      attributeChangedCallback(name, oldState, newState) {
+        if (name === 'gate-id') {
+          const header = this.shadowRoot.querySelector('p.gate-header');
+          header.innerText = header.innerText.replace("N", newState);
+        }
+
+        if (name === 'state') {
+          const stateBlock = this.shadowRoot.querySelector('div.state-block');
+          const stateIcon = stateBlock.querySelector('span');
+          const stateText = stateBlock.querySelector('p');
+
+          if (stateProps[newState]) {
+            const { style, text } = stateProps[newState];
+            stateIcon.className = 'state ' + style;
+            stateText.innerText = text;
+          } else {
+            stateIcon.className = 'state';
+            stateText.innerText = 'Unknown';
+          }
+        }
+      }
+    });
+
+    customElements.define('image-map', class extends HTMLElement {
+      static observedAttributes = ['src'];
+
+      constructor() {
+        super();
+        const template = document.querySelector('template#image-map').content;
+        const shadowRoot = this.attachShadow({ mode: 'open' });
+        shadowRoot.appendChild(template.cloneNode(true));
+        shadowRoot.querySelector('#map').onload = () => this.#updateLayout();
+      }
+
+      #hideElements() {
+        this.shadowRoot
+          .querySelector('slot')
+          .assignedElements()
+          .forEach(el => el.style.display = 'none');
+      }
+
+      #updateLayout() {
+        const image = this.shadowRoot.querySelector('#map');
+        const elements = this.shadowRoot.querySelector('slot').assignedElements();
+
+        if (image.naturalWidth === 0 || !this.config) {
+          this.#hideElements();
+          return;
+        }
+
+        const sizeRatio = image.width / image.naturalWidth;
+
+        this.config.forEach(gate => {
+          const element = elements.find(el => el.getAttribute('gate-id') == gate.id);
+          if (element) {
+            element.style.display = '';
+            element.style.left = gate.x * sizeRatio + 'px';
+            element.style.top = gate.y * sizeRatio + 'px';
+          }
+        });
+      }
+
+      connectedCallback() {
+        window.addEventListener('resize', () => this.#updateLayout());
+      }
+
+      attributeChangedCallback(name, oldState, newState) {
+        if (name !== 'src') {
+          return;
+        }
+
+        this.shadowRoot.querySelector('#map').src = newState;
+      }
+
+      setConfig(config) {
+        this.#hideElements();
+        this.config = config;
+        this.#updateLayout();
+      }
+    });
     </script>
   </head>
   <body>
     <div>
       <h1>Control Page</h1>
+      <select id="map-select"></select>
+      <image-map src="">
+        <gate-controller gate-id="0"></gate-controller>
+        <gate-controller gate-id="1"></gate-controller>
+        <gate-controller gate-id="2"></gate-controller>
+        <gate-controller gate-id="3"></gate-controller>
+        <gate-controller gate-id="4"></gate-controller>
+        <gate-controller gate-id="5"></gate-controller>
+        <gate-controller gate-id="6"></gate-controller>
+      </image-map>
     </div>
 
     <script>
     let ws = new WebSocket("ws://" + location.host + location.pathname);
-    let controllers = [];
-    let ready = false;
-    let imageMap = null;
+    let currentMap = null;
+    const mapSelect = document.querySelector('select');
+
+    function configureMap(mapConfig) {
+      const imageMap = document.querySelector('image-map');
+
+      imageMap.setAttribute('src', '/maps/' + mapConfig.id);
+      imageMap.setConfig(mapConfig.gates);
+    }
+
+    async function getConfig() {
+      const file = await fetch("/config");
+      return await file.json();
+    }
 
     getConfig().then(c => {
       config = c;
 
-      for (const gate of config) {
-        controllers.push(createControls(gate.id));
+      for (const map of config) {
+        const option = document.createElement('option');
+        option.innerText = map.id;
+        option.value = map.id;
+
+        mapSelect.appendChild(option);
       }
 
-      imageMap = new ImageMap(
-        {
-          mapImage: '/map',
-          gates: config
-        },
-        controllers,
-        document.querySelector('body > div')
-      );
+      const configure = () => {
+        currentMap = mapSelect.value;
+        configureMap(
+          config.find(val => val.id === currentMap)
+        );
+      };
 
-      imageMap.addEventListener('ready', configureButtons);
+      configure();
 
-      ready = true;
+      mapSelect.addEventListener('change', configure);
+
+      window.addEventListener('change-gate-state', e => {
+        const { id, state } = e.detail;
+        const message = {
+          type: 'change_state',
+          payload: { id, state }
+        };
+
+        ws.send(JSON.stringify(message));
+      });
+
+      window.addEventListener('new-gate-state', e => {
+        const { id, state } = e.detail;
+
+        const gateController = document.querySelector(`gate-controller[gate-id="${id}"]`);
+        gateController.setAttribute('state', state);
+      });
     });
-
-    function configureButtons() {
-      for (const gate of config) {
-        bindMessage(`#controller-${gate.id} > #raise`, { type: "change_state", payload: { id: gate.id, state: true }});
-        bindMessage(`#controller-${gate.id} > #lower`, { type: "change_state", payload: { id: gate.id, state: false }});
-      }
-    }
-
-    function setButtonState(state) {
-      while (!ready);
-      for (const gate of config) {
-        document.querySelectorAll(`#raise, #lower`).forEach(el => el.disabled = !state);
-      }
-    }
 
     ws.addEventListener('message', e => {
       let msg = JSON.parse(e.data);
@@ -114,51 +379,22 @@
       if (msg.type == "query_state_result") {
         const gateStates = msg.payload;
         for (const state of gateStates) {
-          let stateBlock = document.querySelector(`#state-block-${state.id}`);
-
-          if (!stateBlock) {
-            continue;
-          }
-
-          const { text, style } = message_responses[state.state];
-
-          stateBlock.querySelector("span.state").className = "state " + style;
-          stateBlock.querySelector("p").innerText = text;
+          window.dispatchEvent(new CustomEvent('new-gate-state', { detail: state }));
         }
       }
     });
 
     ws.addEventListener('close', () => {
-      while (!ready);
-      for (const gate of config) {
-        document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
-        document.querySelector(`#state-block-${gate.id} > p`).innerText = "Disconnected";
-      }
-
-      setButtonState(false);
+      document
+        .querySelectorAll('gate-controller')
+        .forEach(gc => gc.setAttribute('state', 'disconnected'));
     });
 
     ws.addEventListener('error', () => {
-      while (!ready);
-      for (const gate of config) {
-        document.querySelector(`#state-block-${gate.id} > span.state`).className = "state";
-        document.querySelector(`#state-block-${gate.id} > p`).innerText = "Communication Error";
-      }
-
-      setButtonState(false);
+      document
+        .querySelectorAll('gate-controller')
+        .forEach(gc => gc.setAttribute('state', 'error'));
     });
-
-    function setListener(selector, type, listener) {
-      document.querySelector(selector).addEventListener(type, listener);
-    }
-
-    function bindMessage(selector, msgObj) {
-      setListener(selector, "click", () => ws.send(JSON.stringify(msgObj)));
-    }
-
-    // ws.addEventListener('open', async () => {
-    //   while (!ready || !imageMap.ready);
-    // });
     </script>
   </body>
 </html>

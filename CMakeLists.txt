@@ -34,4 +34,13 @@ CPMAddPackage(
         "CRYPTOPP_BUILD_TESTING OFF"
 )
 
+CPMAddPackage(
+    NAME ftxui
+    VERSION 5.0.0
+    GITHUB_REPOSITORY "ArthurSonzogni/FTXUI"
+    GIT_TAG "v5.0.0"
+    OPTIONS
+        "BUILD_TESTS OFF"
+)
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)

@@ -22,14 +22,6 @@ add_executable(
     config.hpp
 )
 
-# configurator is compatible with only windows because of conio.h
-if (WIN32)
-	add_executable(
-		configurator
-		configurator.cpp
-	)
-endif()
-
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 
 # boost windows-specific setting
@@ -42,6 +34,18 @@ target_link_libraries(
     Boost::beast
     nlohmann_json::nlohmann_json
     cryptopp::cryptopp
+)
+
+add_executable(
+	configurator
+	configurator.cpp
+)
+
+target_link_libraries(
+    configurator
+    ftxui::component
+    ftxui::dom
+    ftxui::screen
 )
 
 # install the server binary and the configurator to bin

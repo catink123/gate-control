@@ -61,6 +61,7 @@ http::response<http::string_body> unauthorized_response(
 );
 
 bool is_target_single_level(std::string_view target, std::string endpoint_name);
+bool target_starts_with_segment(std::string_view target, std::string endpoint_name);
 
 // handle given request by returning an appropriate response
 template <class Body, class Allocator>

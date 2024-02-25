@@ -29,7 +29,7 @@ enum AuthorizationType {
 
 const std::vector<std::pair<std::string, std::optional<AuthorizationType>>> endpoint_map = {
     { "/config", View },
-    { "/map", View },
+    { "/maps", View },
     { "/control", Control },
     { "/view", View },
     { "/", std::nullopt }

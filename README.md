@@ -124,36 +124,49 @@ john:2:securepassword123
 To configure the gates you need a map image and a JSON config file.
 Config file is of the following format:
 ```json
-{
-  "mapImage": "example.png",
-  "gates": [
-    {
-      "id": 3,
-      "x": 220,
-      "y": 100
-    },
-    {
-      "id": 0,
-      "x": 320,
-      "y": 100
-    }
-  ]
-}
+[
+  {
+    "id": "first_map",
+    "mapImage": "example1.png",
+    "gates": [
+      {
+        "id": 6,
+        "x": 470,
+        "y": 250
+      }
+    ]
+  },
+  {
+    "id": "second_map",
+    "mapImage": "example2.png",
+    "gates": [
+      {
+        "id": 3,
+        "x": 220,
+        "y": 100
+      },
+      {
+        "id": 0,
+        "x": 320,
+        "y": 100
+      }
+    ]
+  }
+]
 ```
 
-The `mapImage` key is the path to the image of the map, and the `gates` key is an array of gates, each of which contains a gate ID, which is relative to the PWM pin ID on the Arduino microcontroller, and XY coordinates of the gate relative to the map's left-top corner. These coordinates scale to the visual representation of the map on the client page.
+The config consists of multiple map entries. The `id` key is the name as well as the identifier for the map. The `mapImage` key is the path to the image of the map, and the `gates` key is an array of gates, each of which contains a gate ID, which is relative to the PWM pin ID on the Arduino microcontroller, and XY coordinates of the gate relative to the map's left-top corner. These coordinates scale to the visual representation of the map on the client page.
 
 ### Starting the server
 
-After you've completed the steps before, you can start the server a terminal window like this:
+After you've completed the steps before, you can start the server in a terminal window like this:
 ```sh
-$ ./GateControl <com-port> <auth-file> <config-file> [<ipv4-address>] [<port>]
+$ ./GateControl <com-port> <auth-file> <config-file> [<ipv4-address> [<port>]]
 ```
 * `<com-port>` is the previously found serial port's name.
 * `<auth-file>` is the path to the previously created auth-file.
 * `<config-file>` is the path to the config file.
-
-Optionally, you can pass an IPv4 address and a port number to bind to.
+* `<ipv4-address>` and `<port>` are the optional IP address and port for the server to listen on.
 
 For example, if the Arduino microcontroller's serial port name is `COM3`, the auth-file and the config file are located in the same directory as the server binary under the names `auth.txt` and `config.json` and you don't want to bind to a specific IP address and port, you would write this command:
 ```
@@ -162,4 +175,4 @@ $ ./GateControl COM3 auth.txt config.json
 
 After the server application responds with the message "Server started at...", you can connect to the server using any browser specifying the server's address and optionally a port (if it's value is not `80`, the default) after a colon in the address bar.
 
-To gracefully shutdown the server application, press `Ctrl + C` in the terminal window it's running in. The server may wait for open sessions to be closed. To force close the server, press `Ctrl + C` once more.
+To gracefully shutdown the server application, press `Ctrl + C` in the terminal window it's running in. The server may wait for open sessions to be closed. To force close the server, press `Ctrl + C` once more or kill the server process.

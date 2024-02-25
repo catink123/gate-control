@@ -253,6 +253,19 @@ bool is_target_single_level(std::string_view target, std::string endpoint_name) 
         (target.ends_with(endpoint_name + "/") || target.ends_with(endpoint_name));
 }
 
+bool target_starts_with_segment(std::string_view target, std::string endpoint_name) {
+    std::string starting_part = "/" + endpoint_name;
+    if (target.starts_with(starting_part)) {
+        if (starting_part.size() == target.size()) {
+            return true;
+        }
+
+        return target[starting_part.size()] == '/';
+    }
+
+    return false;
+}
+
 template <class Body, class Allocator>
 http::message_generator handle_request(
     beast::string_view doc_root,
@@ -344,6 +357,10 @@ http::message_generator handle_request(
 
     // if the request target is not the root page...
     if (const auto endpoint_perms = get_endpoint_permissions(req.target())) {
+        if (endpoint_perms.value() == Blocked) {
+            return forbidden(req.target());
+        }
+
 		// make sure the client has sufficient permissions
 		if (
 			req.find(http::field::authorization) == req.end()
@@ -355,10 +372,9 @@ http::message_generator handle_request(
 
 		if (!permissions) {
             return unauthorized_response(nonce, opaque, req, req.target());
-			//return unauthorized(req.target());
 		}
 
-        if (permissions < endpoint_perms) {
+        if (permissions.value() < endpoint_perms.value()) {
             return forbidden(req.target());
         }
     }
@@ -366,7 +382,7 @@ http::message_generator handle_request(
     std::string path;
 
     if (is_target_single_level(req.target(), "config")) {
-        std::string gate_config = config->get_gate_config_str();
+        std::string map_config = config->get_maps_for_client();
         if (req.method() == http::verb::head) {
 			http::response<http::empty_body> res{
 				http::status::ok,
@@ -375,7 +391,7 @@ http::message_generator handle_request(
 
 			res.set(http::field::server, VERSION);
 			res.set(http::field::content_type, "application/json");
-			res.content_length(gate_config.size());
+			res.content_length(map_config.size());
 			res.keep_alive(req.keep_alive());
 
 			return res;
@@ -388,9 +404,9 @@ http::message_generator handle_request(
 
 			res.set(http::field::server, VERSION);
 			res.set(http::field::content_type, "application/json");
-			res.content_length(gate_config.size());
+			res.content_length(map_config.size());
 			res.keep_alive(req.keep_alive());
-            res.body() = gate_config;
+            res.body() = map_config;
 
             return res;
         }
@@ -398,8 +414,20 @@ http::message_generator handle_request(
             return bad_request("Invalid method on /config");
         }
     }
-    if (is_target_single_level(req.target(), "map")) {
-        path = config->map_image_path;
+    if (target_starts_with_segment(req.target(), "maps")) {
+        // determine which map to send to the client
+        if (req.target() == "/maps" || req.target() == "/maps/") {
+            return not_found(req.target());
+        }
+
+        std::string id = req.target().substr(6);
+
+        try {
+			path = config->get_map_by_id(id).map_image_path;
+        }
+        catch (...) {
+            return not_found(req.target());
+        }
     }
     else {
 		// build requested file path
