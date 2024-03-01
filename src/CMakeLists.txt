@@ -36,31 +36,12 @@ target_link_libraries(
     cryptopp::cryptopp
 )
 
-add_executable(
-	configurator
-	configurator.cpp
-)
-
-target_link_libraries(
-    configurator
-    ftxui::component
-    ftxui::dom
-    ftxui::screen
-)
-
 # install the server binary and the configurator to bin
 
 install(
     TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
-
-if (WIN32)
-	install(
-		TARGETS configurator
-		RUNTIME DESTINATION bin
-	)
-endif()
 
 # install the client webapp to bin/client
 

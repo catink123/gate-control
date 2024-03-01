@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 project(
     GateControl
     VERSION 1.1.0
     LANGUAGES CXX
 )
+
+enable_language(C CXX ASM)
 
 include("cmake/modules/CPM.cmake")
 
@@ -32,15 +36,6 @@ CPMAddPackage(
     OPTIONS
         "BUILD_TESTS OFF"
         "CRYPTOPP_BUILD_TESTING OFF"
-)
-
-CPMAddPackage(
-    NAME ftxui
-    VERSION 5.0.0
-    GITHUB_REPOSITORY "ArthurSonzogni/FTXUI"
-    GIT_TAG "v5.0.0"
-    OPTIONS
-        "BUILD_TESTS OFF"
 )
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
