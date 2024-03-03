@@ -41,12 +41,14 @@ std::optional<AuthorizationType> get_endpoint_permissions(
 
 struct auth_data {
     AuthorizationType permissions;
+    const std::vector<std::string> map_groups;
     std::string password;
 
     auth_data(
         const AuthorizationType permissions,
+        const std::vector<std::string> map_groups,
         std::string_view password
-    ) : permissions(permissions), password(password) {}
+    ) : permissions(permissions), map_groups(map_groups), password(password) {}
 };
 
 typedef std::unordered_map<std::string, auth_data> auth_table_t;
@@ -77,7 +79,7 @@ struct digest_auth {
     void set_field(std::string_view key, std::string_view value);
     bool is_valid() const;
 
-    // MD5 hashing and no qop is assumed
+    // SHA256 hashing assumed
     bool check_password(
         std::string_view password,
         std::string_view method,
@@ -94,9 +96,9 @@ std::optional<digest_auth> parse_digest_auth_field(
 );
 
 template <class Body, class Allocator>
-std::optional<AuthorizationType> get_auth(
-	const http::request<Body, http::basic_fields<Allocator>>& req,
-	const std::unordered_map<std::string, auth_data>& auth_table,
+std::optional<auth_data> get_auth(
+    const http::request<Body, http::basic_fields<Allocator>>& req,
+    const std::unordered_map<std::string, auth_data>& auth_table,
     const std::string& nonce,
     const std::string& opaque
 ) {
@@ -120,7 +122,7 @@ std::optional<AuthorizationType> get_auth(
     const std::string method = http_method_to_str(req.base().method());
 
     if (digest.check_password(stored_auth_data.password, method, nonce, opaque, auth_table)) {
-        return stored_auth_data.permissions;
+        return stored_auth_data;
     }
     else {
         return std::nullopt;

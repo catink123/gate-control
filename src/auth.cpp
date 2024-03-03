@@ -35,15 +35,24 @@ open_auth_table_from_file(fs::path file_path) {
     std::string current_line;
 
     // parsing line by line with the following format:
-    // login:permissions:password
+    // login:permissions:map_groups:password
+    // map_groups is an array of ids delimeted by semicolons
     while (std::getline(file, current_line)) {
+        // delimits login and permissions
         std::size_t first_delimeter = current_line.find(':');
         if (first_delimeter == std::string::npos) {
             continue;
         }
 
+        // delimits permissions and map_groups
         std::size_t second_delimeter = current_line.find(':', first_delimeter + 1);
         if (second_delimeter == std::string::npos || current_line.size() == second_delimeter) {
+            continue;
+        }
+
+        // delimits map_groups and password
+        std::size_t third_delimeter = current_line.find(':', second_delimeter + 1);
+        if (third_delimeter == std::string::npos || current_line.size() == third_delimeter) {
             continue;
         }
 
@@ -64,12 +73,33 @@ open_auth_table_from_file(fs::path file_path) {
             continue;
         }
 
-        std::string password = current_line.substr(second_delimeter + 1);
+        std::string map_groups_str =
+            current_line.substr(
+                second_delimeter + 1,
+                third_delimeter - second_delimeter - 1
+            );
+
+        std::vector<std::string> map_groups;
+
+        std::size_t previous_delim_idx = 0;
+        std::size_t delim_idx;
+        do {
+            delim_idx = map_groups_str.find(';', previous_delim_idx);
+            std::string group = 
+                map_groups_str.substr(previous_delim_idx, delim_idx - previous_delim_idx);
+
+            map_groups.push_back(group);
+
+            previous_delim_idx = delim_idx + 1;
+        } while (delim_idx != std::string::npos);
+
+        std::string password = current_line.substr(third_delimeter + 1);
 
         auth_table.insert({
             login,
             auth_data(
                 static_cast<AuthorizationType>(permissions),
+                map_groups,
                 password
             ) 
 		});
@@ -129,7 +159,7 @@ std::string sha256_hash(const std::string& input) {
 
     CryptoPP::SHA256 hash;
 
-    CryptoPP::StringSource(input, true,
+    CryptoPP::StringSource ssource(input, true,
         new CryptoPP::HashFilter(hash,
             new CryptoPP::HexEncoder(
 				new CryptoPP::StringSink(output),
@@ -139,25 +169,6 @@ std::string sha256_hash(const std::string& input) {
 	);
 
     return output;
-
-  //  CryptoPP::Weak::MD5 hash;
-
-  //  hash.Update(
-  //      reinterpret_cast<const CryptoPP::byte*>(
-  //          input.data()
-		//),
-  //      input.size()
-  //  );
-
-  //  unsigned int size = hash.DigestSize();
-  //  std::vector<char> hashed_value(size, '\0');
-  //  char* hashed_value_c_str = &hashed_value[0];
-
-  //  hash.Final(
-  //      reinterpret_cast<CryptoPP::byte*>(hashed_value_c_str)
-  //  );
-
-  //  return std::string(hashed_value_c_str, size);
 }
 
 std::string http_method_to_str(const http::verb& method) {

@@ -368,13 +368,13 @@ http::message_generator handle_request(
             return unauthorized_response(nonce, opaque, req, req.target());
 		}
 
-		const auto permissions = get_auth(req, *auth_table, nonce, opaque);
+		const auto auth = get_auth(req, *auth_table, nonce, opaque);
 
-		if (!permissions) {
+		if (!auth) {
             return unauthorized_response(nonce, opaque, req, req.target());
 		}
 
-        if (permissions.value() < endpoint_perms.value()) {
+        if (auth->permissions < endpoint_perms.value()) {
             return forbidden(req.target());
         }
     }
@@ -382,7 +382,10 @@ http::message_generator handle_request(
     std::string path;
 
     if (is_target_single_level(req.target(), "config")) {
-        std::string map_config = config->get_maps_for_client();
+		std::optional<auth_data> user_auth_data = get_auth(req, *auth_table, nonce, opaque);
+
+        std::string map_config = config->get_maps_for_client(user_auth_data.value());
+
         if (req.method() == http::verb::head) {
 			http::response<http::empty_body> res{
 				http::status::ok,

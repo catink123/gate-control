@@ -7,33 +7,49 @@
 #include <fstream>
 #include <optional>
 #include <initializer_list>
+#include "auth.hpp"
 
 namespace fs = std::filesystem;
 
 struct map_entry {
 	std::string id;
+	std::optional<std::string> group;
 	std::string map_image_path;
 	nlohmann::json gate_config;
 
 	map_entry(
 		std::string id,
+		std::optional<std::string> group,
 		std::string map_image_path,
 		nlohmann::json gate_config
 	) : id(id), 
+		group(group),
 		map_image_path(map_image_path), 
 		gate_config(gate_config) {}
 
 	nlohmann::json to_json() const {
+		nlohmann::json group_value = nullptr;
+		if (group.has_value()) {
+			group_value = group.value();
+		}
+
 		return {
 			{ "id", id },
+			{ "group", group_value },
 			{ "mapImage", map_image_path },
 			{ "gates", gate_config }
 		};
 	}
 
 	nlohmann::json to_client_json() const {
+		nlohmann::json group_value = nullptr;
+		if (group.has_value()) {
+			group_value = group.value();
+		}
+
 		return {
 			{ "id", id },
+			{ "group", group_value },
 			{ "gates", gate_config }
 		};
 	}
@@ -61,6 +77,7 @@ struct gc_config {
 		if (
 			!entry.is_object() ||
 			!entry["id"].is_string() ||
+			(!entry["group"].is_string() && !entry["group"].is_null()) ||
 			!entry["mapImage"].is_string() ||
 			!entry["gates"].is_array()
 		) {
@@ -100,9 +117,15 @@ struct gc_config {
 		std::vector<map_entry> maps;
 
 		for (auto map : parsed_json) {
+			std::optional<std::string> group_value = std::nullopt;
+			if (map["group"].is_string()) {
+				group_value = map["group"];
+			}
+
 			maps.push_back(
 				map_entry(
 					map["id"],
+					group_value,
 					map["mapImage"],
 					map["gates"]
 				)
@@ -127,10 +150,22 @@ struct gc_config {
 		return parse(contents);
 	}
 
-	std::string get_maps_for_client() const {
+	std::string get_maps_for_client(const auth_data& user_auth) const {
 		std::vector<nlohmann::json> jsonified_maps;
 
 		for (const map_entry& map : maps) {
+			// if a map has an associated group 
+			// and the user doesn't belong to that group, 
+			// don't show it to the user with control permissions
+			if (user_auth.permissions >= Control && map.group) {
+				const auto& found_value =
+					std::find(user_auth.map_groups.begin(), user_auth.map_groups.end(), map.group.value());
+
+				if (found_value == user_auth.map_groups.end()) {
+					continue;
+				}
+			}
+
 			jsonified_maps.push_back(map.to_client_json());
 		}
 
@@ -151,10 +186,6 @@ struct gc_config {
 
 		return *found_map;
 	}
-
-	//std::string get_gate_config_str() const {
-	//	return gate_config.dump();
-	//}
 };
 
 #endif

@@ -104,7 +104,7 @@ In order for authentication to work, you need to create a special file called an
 Create an empty text file anywhere in the filesystem and write lines in the following format:
 
 ```
-login:permissions:password
+login:permissions:map_groups:password
 ```
 
 * `login` is the user's name.
@@ -112,11 +112,12 @@ login:permissions:password
 	* `2` - Control permissions (can control the gate and view it's status),
 	* `1` - View permissions (can only view the gate's status),
 	* `0` - Blocked permissions (can't control the gate and view it's status).
+* `map_groups` is a semicolon-separated list of map groups a user is allowed to control. See below for what a map group means.
 * `password` is the user's password. 
 
-For example, if you want to list a user named "john" with password "securepassword123", give him Control permissions and save the auth-file to `auth.txt`, you would add the following line to the file `auth.txt`:
+For example, if you want to list a user named "john" with password "securepassword123", give him Control permissions, add him to groups "group1" and "group2" and save the auth-file to `auth.txt`, you would add the following line to the file `auth.txt`:
 ```
-john:2:securepassword123
+john:2:group1;group2:securepassword123
 ```
 
 ### Configuring the gates
@@ -127,6 +128,7 @@ Config file is of the following format:
 [
   {
     "id": "first_map",
+    "group": null,
     "mapImage": "example1.png",
     "gates": [
       {
@@ -138,6 +140,7 @@ Config file is of the following format:
   },
   {
     "id": "second_map",
+    "group": "testgroup",
     "mapImage": "example2.png",
     "gates": [
       {
@@ -155,7 +158,7 @@ Config file is of the following format:
 ]
 ```
 
-The config consists of multiple map entries. The `id` key is the name as well as the identifier for the map. The `mapImage` key is the path to the image of the map, and the `gates` key is an array of gates, each of which contains a gate ID, which is relative to the PWM pin ID on the Arduino microcontroller, and XY coordinates of the gate relative to the map's left-top corner. These coordinates scale to the visual representation of the map on the client page.
+The config consists of multiple map entries. The `id` key is the name as well as the identifier for the map. The `group` key is a special key that makes it possible to allow control of the map to a certain group of users. Set this to `null` (as in the first map in the example) to allow all users with Control permissions to control the map. The `mapImage` key is the path to the image of the map, and the `gates` key is an array of gates, each of which contains a gate ID, which is relative to the PWM pin ID on the Arduino microcontroller, and XY coordinates of the gate relative to the map's left-top corner. These coordinates scale to the visual representation of the map on the client page.
 
 ### Starting the server
 

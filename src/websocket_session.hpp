@@ -47,11 +47,11 @@ public:
         const std::string& opaque
     ) {
         auto auth = get_auth(req, *auth_table, nonce, opaque);
-        if (auth == std::nullopt || auth == Blocked) {
+        if (auth == std::nullopt || auth->permissions == Blocked) {
             return;
         }
 
-        permissions = auth.value();
+        permissions = auth->permissions;
 
         ws.set_option(
             websocket::stream_base::timeout::suggested(
