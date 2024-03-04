@@ -19,13 +19,9 @@
 #include <cryptopp/osrng.h>
 #include <cryptopp/hex.h>
 
-namespace fs = std::filesystem;
+#include "auth_table.hpp"
 
-enum AuthorizationType {
-    Blocked = 0,
-    View = 1,
-    Control = 2,
-};
+namespace fs = std::filesystem;
 
 const std::vector<std::pair<std::string, std::optional<AuthorizationType>>> endpoint_map = {
     { "/config", View },
@@ -39,24 +35,7 @@ std::optional<AuthorizationType> get_endpoint_permissions(
     std::string_view path
 );
 
-struct auth_data {
-    AuthorizationType permissions;
-    const std::vector<std::string> map_groups;
-    std::string password;
-
-    auth_data(
-        const AuthorizationType permissions,
-        const std::vector<std::string> map_groups,
-        std::string_view password
-    ) : permissions(permissions), map_groups(map_groups), password(password) {}
-};
-
-typedef std::unordered_map<std::string, auth_data> auth_table_t;
-
 std::string http_method_to_str(const http::verb& method);
-
-std::optional<std::unordered_map<std::string, auth_data>>
-open_auth_table_from_file(fs::path file_path);
 
 const std::size_t NONCE_SIZE = 32;
 const std::size_t OPAQUE_SIZE = 32;

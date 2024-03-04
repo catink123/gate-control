@@ -15,6 +15,7 @@ add_executable(
     json_message.cpp
     arduino_messenger.hpp
     arduino_messenger.cpp
+    auth_table.hpp
     auth.hpp
     auth.cpp
     common_state.hpp
@@ -22,7 +23,17 @@ add_executable(
     config.hpp
 )
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
+add_executable(
+    configurator 
+    auth_table.hpp
+    configurator.cpp
+)
+
+add_library(console_prettifier INTERFACE console_prettifier.hpp)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 20)
+set_target_properties(configurator PROPERTIES CXX_STANDARD 20)
+set_target_properties(console_prettifier PROPERTIES CXX_STANDARD 20 LINKER_LANGUAGE CXX)
 
 # boost windows-specific setting
 if (WIN32)
@@ -36,10 +47,15 @@ target_link_libraries(
     cryptopp::cryptopp
 )
 
+target_link_libraries(
+    configurator
+    console_prettifier
+)
+
 # install the server binary and the configurator to bin
 
 install(
-    TARGETS ${PROJECT_NAME}
+    TARGETS ${PROJECT_NAME} configurator
     RUNTIME DESTINATION bin
 )
 
